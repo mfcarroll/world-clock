@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GeoTime Dashboard</title>
-    <!-- The main stylesheet, processed by Vite -->
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body class="h-full text-gray-200 antialiased">
@@ -16,11 +15,8 @@
         </p>
       </header>
 
-      <!-- Main Grid Layout -->
       <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Left Column: Location and Local Time -->
         <div class="lg:col-span-1 space-y-6">
-          <!-- Location Info Card -->
           <div id="location-card" class="card rounded-2xl shadow-lg p-6">
             <h2 class="text-2xl font-semibold text-white mb-4 flex items-center">
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3 text-blue-400"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
@@ -38,7 +34,6 @@
             </div>
           </div>
 
-          <!-- Time Card -->
           <div class="card rounded-2xl shadow-lg p-6 text-center">
             <div id="time-loader" class="space-y-4">
               <div class="h-10 bg-gray-700 rounded w-3/4 mx-auto skeleton"></div>
@@ -57,7 +52,6 @@
             </div>
           </div>
           
-          <!-- Google Map -->
           <div class="card rounded-2xl shadow-lg overflow-hidden aspect-w-1 aspect-h-1">
             <h2 class="text-xl font-semibold text-white p-4">Location Map</h2>
             <div id="location-map" class="bg-gray-700 w-full h-64 flex items-center justify-center text-gray-400">
@@ -66,9 +60,7 @@
           </div>
         </div>
 
-        <!-- Right Column: World Clock and Timezone Map -->
         <div class="lg:col-span-2 space-y-6">
-          <!-- World Clock Card -->
           <div class="card rounded-2xl shadow-lg p-6">
             <h2 class="text-2xl font-semibold text-white mb-4">World Clock</h2>
             <div class="flex flex-col sm:flex-row gap-2 mb-4">
@@ -79,18 +71,44 @@
             <div id="world-clocks-container" class="space-y-4 max-h-[26rem] overflow-y-auto pr-2"></div>
           </div>
 
-          <!-- Timezone Map -->
           <div class="card rounded-2xl shadow-lg overflow-hidden">
-            <h2 id="timezone-map-title" class="text-xl font-semibold text-white p-4">World Timezone Map</h2>
+            <div class="p-4 relative">
+                <h2 id="timezone-map-title" class="text-xl font-semibold text-white">World Timezone Map</h2>
+                
+                <div id="selected-timezone-details" class="text-gray-400 mt-2 min-h-[2.5rem]">
+                    <p>Your GPS timezone will be highlighted here.</p>
+                </div>
+          
+                <div id="hover-timezone-details" class="hidden absolute top-4 right-4 bg-gray-900/80 p-3 rounded-lg border border-gray-600 text-right">
+                    </div>
+            </div>
             <div id="timezone-map" class="w-full h-[400px] bg-gray-700 flex items-center justify-center text-gray-400">
                 <span>Initializing Map...</span>
             </div>
           </div>
+
         </div>
       </div>
     </div>
-    <!-- The main script, processed by Vite -->
+    
+    <template id="world-clock-template">
+      <div class="grid grid-cols-3 items-center gap-4 bg-gray-700/50 p-3 rounded-lg">
+        <div>
+          <p class="city text-lg font-medium text-white truncate"></p>
+          <p class="region text-sm text-gray-400"></p>
+        </div>
+        <div class="text-center">
+          <p class="time text-2xl font-semibold text-white font-mono">--:--</p>
+          <p class="date-diff text-sm text-gray-400">--, +/- hrs</p>
+        </div>
+        <div class="flex justify-end">
+          <button class="remove-btn text-gray-500 hover:text-red-400 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+          </button>
+        </div>
+      </div>
+    </template>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
-
