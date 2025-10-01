@@ -2,7 +2,6 @@
 
 import * as dom from './dom';
 import { state } from './state';
-import { updateMapHighlights } from './map'; // Assuming map.ts exports this
 
 const TIMEZONE_API_KEY = "W9EYNXL4UXY8";
 
@@ -12,32 +11,9 @@ export function startClocks(localTimezone: string) {
   state.clocksInterval = setInterval(() => updateAllClocks(localTimezone), 1000);
 }
 
-export async function fetchAndSetTimeOffset() {
-  try {
-    const response = await fetch('https://timeapi.io/api/time/current/zone?timeZone=UTC');
-    if (!response.ok) throw new Error('Network response was not ok.');
-    
-    const data = await response.json();
-    
-    const fullDateString = data.dateTime;
-    const dateParts = fullDateString.split('.');
-    const dateWithoutFractional = dateParts[0];
-    const fractionalSeconds = dateParts[1].substring(0, 3);
-    const standardDateString = `${dateWithoutFractional}.${fractionalSeconds}Z`;
+// --- REMOVED: The redundant fetchAndSetTimeOffset function has been deleted ---
 
-    const serverTime = new Date(standardDateString).getTime();
-    const localTime = new Date().getTime();
-    
-    state.timeOffset = serverTime - localTime;
-    
-    console.log(`Time offset calculated using timeapi.io: ${state.timeOffset}ms`);
-
-  } catch (error) {
-    console.error('Could not fetch accurate time from timeapi.io. Falling back to device time.', error);
-    state.timeOffset = 0; 
-  }
-}
-
+// --- REFACTORED: Now calculates the time offset from the first successful API call ---
 export async function fetchTimezoneForCoordinates(lat: number, lon: number): Promise<string | null> {
   console.log(`Fetching timezone for Lat: ${lat}, Lon: ${lon}`);
   try {
@@ -50,6 +26,13 @@ export async function fetchTimezoneForCoordinates(lat: number, lon: number): Pro
     console.log("TimeZoneDB API Response:", data);
 
     if (data.status === 'OK') {
+      // If this is the first successful fetch, calculate the time offset.
+      if (state.timeOffset === 0 && data.timestamp) {
+        const serverTime = data.timestamp * 1000; // API returns seconds, we need milliseconds
+        const localTime = new Date().getTime();
+        state.timeOffset = serverTime - localTime;
+        console.log(`Time offset calculated from TimeZoneDB: ${state.timeOffset}ms`);
+      }
       return data.zoneName;
     } else {
       throw new Error(data.message || 'Failed to fetch timezone.');
@@ -96,7 +79,6 @@ export function updateAllClocks(localTimezone: string) {
   });
 }
 
-// --- FIXED: Refactored to use a single return statement ---
 export function getTimezoneOffset(tz1: string, tz2: string): string {
     let result: string;
     try {

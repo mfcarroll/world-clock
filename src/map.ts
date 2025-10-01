@@ -32,11 +32,8 @@ export async function initMaps() {
   });
   state.timezoneMapMarker = new AdvancedMarkerElement({ position: initialCoords, map: state.timezoneMap });
 
-  try {
-    state.timezoneMap.data.loadGeoJson(TIMEZONE_GEOJSON_URL);
-  } catch (error) {
-    console.error("Failed to load GeoJSON data:", error);
-  }
+  // --- MODIFIED: Load the GeoJSON in the background ---
+  loadGeoJsonAsync();
 
   state.timezoneMap.data.setStyle({
     fillColor: '#4f46e5',
@@ -55,7 +52,6 @@ export async function initMaps() {
     }
   });
 
-  // --- FIXED: Restored the correct mouseover logic from the previous version ---
   state.timezoneMap.data.addListener('mouseover', (event: google.maps.Data.MouseEvent) => {
     if(!state.timezoneMap) return;
     state.timezoneMap.data.overrideStyle(event.feature, {
@@ -77,6 +73,23 @@ export async function initMaps() {
     state.timezoneMap.data.revertStyle();
     dom.hoverTimezoneDetailsEl.classList.add('hidden');
   });
+}
+
+// --- NEW: Asynchronous function to load GeoJSON ---
+async function loadGeoJsonAsync() {
+    try {
+        console.log("Starting background download of GeoJSON...");
+        const response = await fetch(TIMEZONE_GEOJSON_URL);
+        if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+        
+        const geoJson = await response.json();
+        if (state.timezoneMap) {
+            state.timezoneMap.data.addGeoJson(geoJson);
+            console.log("GeoJSON loaded and layered onto map.");
+        }
+    } catch (error) {
+        console.error("Failed to load GeoJSON data:", error);
+    }
 }
 
 export function updateMapHighlights() {

@@ -4,11 +4,11 @@ import { Loader } from '@googlemaps/js-api-loader';
 import * as dom from './dom';
 import { state } from './state';
 import { initMaps, onLocationError, onLocationSuccess } from './map';
-import { fetchAndSetTimeOffset, updateAllClocks } from './time';
+// --- REMOVED: No longer importing fetchAndSetTimeOffset ---
+import { updateAllClocks } from './time';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0"; 
 
-// --- NEW: Function to save the timezones list to localStorage ---
 function saveTimezones() {
     localStorage.setItem('worldClocks', JSON.stringify(state.addedTimezones));
 }
@@ -41,7 +41,7 @@ function handleAddTimezone() {
     const ianaTimezones = Intl.supportedValuesOf('timeZone');
     if (newTimezone && !state.addedTimezones.includes(newTimezone) && ianaTimezones.includes(newTimezone)) {
         state.addedTimezones.push(newTimezone);
-        saveTimezones(); // --- MODIFIED: Save after adding
+        saveTimezones();
         renderWorldClocks();
         const localTimezone = dom.localTimezoneEl.textContent?.replace(/ /g, '_');
         if (localTimezone && localTimezone !== '--_/_--') {
@@ -55,7 +55,7 @@ function handleAddTimezone() {
 
 
 async function startApp() {
-  await fetchAndSetTimeOffset();
+  // --- REMOVED: The call to fetchAndSetTimeOffset is no longer needed ---
 
   const loader = new Loader({
     apiKey: GOOGLE_MAPS_API_KEY,
@@ -85,7 +85,7 @@ async function startApp() {
     if (removeBtn) {
       const timezoneToRemove = (removeBtn as HTMLElement).dataset.timezone!;
       state.addedTimezones = state.addedTimezones.filter(tz => tz !== timezoneToRemove);
-      saveTimezones(); // --- MODIFIED: Save after removing
+      saveTimezones();
       renderWorldClocks();
     }
   });
