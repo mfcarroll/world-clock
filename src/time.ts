@@ -2,9 +2,9 @@
 
 import * as dom from './dom';
 import { state } from './state';
-import { updateMapHighlights } from './map'; // Assuming map.ts exports this
 
-const TIMEZONE_API_KEY = "W9EYNXL4UXY8";
+// This API key is now passed through the Vite proxy for security
+const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0"; 
 
 export function startClocks(localTimezone: string) {
   if (state.clocksInterval) clearInterval(state.clocksInterval);
@@ -12,36 +12,39 @@ export function startClocks(localTimezone: string) {
   state.clocksInterval = setInterval(() => updateAllClocks(localTimezone), 1000);
 }
 
-// --- REFACTORED: Now correctly calculates UTC time from the API response ---
+// --- REWRITTEN to use the Google Maps Time Zone API ---
 export async function fetchTimezoneForCoordinates(lat: number, lon: number): Promise<string | null> {
-  console.log(`Fetching timezone for Lat: ${lat}, Lon: ${lon}`);
+  console.log(`Fetching timezone from Google for Lat: ${lat}, Lon: ${lon}`);
   try {
-    const apiUrl = `/api/timezone/v2.1/get-time-zone?key=${TIMEZONE_API_KEY}&format=json&by=position&lat=${lat}&lng=${lon}`;
+    const timestamp = Math.floor(Date.now() / 1000);
+    // The API key is added here and will be proxied by Vite
+    const apiUrl = `/api/google-timezone/json?location=${lat},${lon}&timestamp=${timestamp}&key=${GOOGLE_MAPS_API_KEY}`;
+    
     const response = await fetch(apiUrl);
-
     if (!response.ok) throw new Error('Network response was not ok.');
     
     const data = await response.json();
-    console.log("TimeZoneDB API Response:", data);
+    console.log("Google Time Zone API Response:", data);
 
-    if (data.status === 'OK') {
-      // If this is the first successful fetch, calculate the time offset.
-      if (state.timeOffset === 0 && data.timestamp) {
-        // The API's timestamp is local, so convert it to UTC by subtracting the zone's offset.
-        const serverUtcTime = (data.timestamp - data.gmtOffset) * 1000;
+    if (data.status === 'OK' && data.timeZoneId) {
+      // Calculate time offset if it hasn't been set yet
+      if (state.timeOffset === 0) {
+        // Google provides UTC offsets in seconds
+        const serverUtcTime = (timestamp + data.dstOffset + data.rawOffset) * 1000;
         const localDeviceTime = new Date().getTime();
         state.timeOffset = serverUtcTime - localDeviceTime;
-        console.log(`Time offset calculated from TimeZoneDB: ${state.timeOffset}ms`);
+        console.log(`Time offset calculated from Google: ${state.timeOffset}ms`);
       }
-      return data.zoneName;
+      return data.timeZoneId;
     } else {
-      throw new Error(data.message || 'Failed to fetch timezone.');
+      throw new Error(data.errorMessage || 'Failed to fetch timezone from Google.');
     }
   } catch (error) {
     console.error('Error fetching timezone:', error);
     return null;
   }
 }
+
 
 export function updateAllClocks(localTimezone: string) {
   const correctedTime = new Date(new Date().getTime() + state.timeOffset);
@@ -63,12 +66,7 @@ export function updateAllClocks(localTimezone: string) {
   dom.timeLoader.classList.add('hidden');
   dom.timeContent.classList.remove('hidden');
 
-  const timezonesToUpdate = [...state.addedTimezones];
-    if (state.temporaryTimezone && !timezonesToUpdate.includes(state.temporaryTimezone)) {
-        timezonesToUpdate.push(state.temporaryTimezone);
-    }
-
-  timezonesToUpdate.forEach(tz => {
+  state.addedTimezones.forEach(tz => {
     const el = document.getElementById(`clock-${tz.replace(/\//g, '-')}`);
     if (el) {
       try {

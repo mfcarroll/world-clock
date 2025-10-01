@@ -4,7 +4,6 @@ import * as dom from './dom';
 import { state } from './state';
 import { fetchTimezoneForCoordinates, getTimezoneOffset, startClocks } from './time';
 import { distance } from './utils';
-// JSZip is no longer needed
 
 // File from https://github.com/evansiroky/timezone-boundary-builder/releases
 const TIMEZONE_GEOJSON_URL = '/timezones-with-oceans.json';
@@ -35,7 +34,7 @@ export async function initMaps() {
   });
   state.timezoneMapMarker = new AdvancedMarkerElement({ position: initialCoords, map: state.timezoneMap });
 
-  loadGeoJsonAsync();
+  loadGeoJson();
 
   state.timezoneMap.data.setStyle({
     fillColor: '#4f46e5',
@@ -44,14 +43,18 @@ export async function initMaps() {
     strokeColor: '#818cf8',
   });
   
-  state.timezoneMap.data.addListener('click', async (event: google.maps.Data.MouseEvent) => {
+  // --- CORRECTED: Use a more robust click handler ---
+  state.timezoneMap.data.addListener('click', (event: google.maps.Data.MouseEvent) => {
     if (event.latLng) {
-      const tzid = event.feature.getProperty('tzid') as string;
-      if (tzid) {
-        state.selectedTimezone = { tzid, feature: event.feature };
-        state.temporaryTimezone = tzid;
-        updateMapHighlights();
-        document.dispatchEvent(new CustomEvent('temporarytimezonechanged', { detail: { tzid } }));
+      const bestFeature = findSmallestFeatureAtLatLng(event.latLng);
+      if (bestFeature) {
+        const tzid = bestFeature.getProperty('tzid') as string;
+        if (tzid) {
+          state.selectedTimezone = { tzid, feature: bestFeature };
+          state.temporaryTimezone = tzid;
+          updateMapHighlights();
+          document.dispatchEvent(new CustomEvent('temporarytimezonechanged', { detail: { tzid } }));
+        }
       }
     }
   });
@@ -80,31 +83,21 @@ export async function initMaps() {
   });
 }
 
-async function loadGeoJsonAsync() {
-    try {
-        console.log(`Starting background download from: ${TIMEZONE_GEOJSON_URL}`);
-        const response = await fetch(TIMEZONE_GEOJSON_URL);
-        if (!response.ok) {
-            console.error("Failed to fetch local GeoJSON file. Did you place 'timezones-with-oceans.json' in the 'public' directory?");
-            throw new Error(`Network response was not ok: ${response.statusText}`);
-        }
-        
-        const geoJson = await response.json();
-        
-        if (state.timezoneMap) {
-            state.timezoneMap.data.addGeoJson(geoJson);
-            state.geoJsonLoaded = true;
-            console.log("GeoJSON loaded and layered onto map.");
+function loadGeoJson() {
+    if (!state.timezoneMap) return;
+    
+    console.log(`Loading GeoJSON from: ${TIMEZONE_GEOJSON_URL}`);
+    
+    state.timezoneMap.data.loadGeoJson(TIMEZONE_GEOJSON_URL, { idPropertyName: 'tzid' }, () => {
+        state.geoJsonLoaded = true;
+        console.log("GeoJSON loaded and layered onto map.");
 
-            if (state.lastFetchedCoords.lat !== 0) {
-                 console.log("Location already known. Finding feature now.");
-                 findAndSetGpsFeature(new google.maps.LatLng(state.lastFetchedCoords.lat, state.lastFetchedCoords.lon));
-                 updateMapHighlights();
-            }
+        if (state.lastFetchedCoords.lat !== 0) {
+            console.log("Location already known. Finding feature now.");
+            findAndSetGpsFeature(new google.maps.LatLng(state.lastFetchedCoords.lat, state.lastFetchedCoords.lon));
+            updateMapHighlights();
         }
-    } catch (error) {
-        console.error("Failed to load and process GeoJSON data:", error);
-    }
+    });
 }
 
 export function updateMapHighlights() {
@@ -145,6 +138,53 @@ export function updateMapHighlights() {
     dom.selectedTimezoneDetailsEl.innerHTML = detailsHtml;
 }
 
+/**
+ * Calculates the area of a feature's geometry.
+ */
+function getFeatureArea(feature: google.maps.Data.Feature): number {
+    let area = 0;
+    const geometry = feature.getGeometry();
+    if (!geometry) return 0;
+
+    const processPolygon = (geom: google.maps.Data.Polygon) => {
+        const path = geom.getArray()[0].getArray();
+        area += google.maps.geometry.spherical.computeArea(path);
+    };
+
+    const geometryType = geometry.getType();
+    if (geometryType === 'Polygon') {
+        processPolygon(geometry as google.maps.Data.Polygon);
+    } else if (geometryType === 'MultiPolygon') {
+        (geometry as google.maps.Data.MultiPolygon).getArray().forEach(processPolygon);
+    }
+    return area;
+}
+
+/**
+ * Finds all features at a given LatLng and returns the one with the smallest area.
+ */
+function findSmallestFeatureAtLatLng(latLng: google.maps.LatLng): google.maps.Data.Feature | null {
+    if (!state.timezoneMap) return null;
+
+    const intersectingFeatures: google.maps.Data.Feature[] = [];
+    state.timezoneMap.data.forEach((feature: google.maps.Data.Feature) => {
+        if (isLocationInFeature(latLng, feature)) {
+            intersectingFeatures.push(feature);
+        }
+    });
+
+    if (intersectingFeatures.length === 0) {
+        return null;
+    }
+    if (intersectingFeatures.length === 1) {
+        return intersectingFeatures[0];
+    }
+
+    // Sort by area and return the smallest feature
+    intersectingFeatures.sort((a, b) => getFeatureArea(a) - getFeatureArea(b));
+    return intersectingFeatures[0];
+}
+
 function isLocationInFeature(location: google.maps.LatLng, feature: google.maps.Data.Feature): boolean {
     const geometry = feature.getGeometry();
     if (!geometry) {
@@ -156,8 +196,11 @@ function isLocationInFeature(location: google.maps.LatLng, feature: google.maps.
 
     const processPolygon = (geom: google.maps.Data.Polygon): boolean => {
         const linearRings = geom.getArray();
-        const outerBoundary = linearRings[0].getArray();
-        const polygon = new google.maps.Polygon({ paths: outerBoundary });
+        if (linearRings.length === 0) return false;
+        
+        const paths = linearRings.map(ring => ring.getArray());
+        
+        const polygon = new google.maps.Polygon({ paths: paths });
         return google.maps.geometry.poly.containsLocation(location, polygon);
     };
 
@@ -177,19 +220,10 @@ function isLocationInFeature(location: google.maps.LatLng, feature: google.maps.
 }
 
 function findAndSetGpsFeature(location: google.maps.LatLng) {
-    if (!state.timezoneMap) return;
-    
-    let matchFound = false;
-    state.timezoneMap.data.forEach((feature: google.maps.Data.Feature) => {
-        if (matchFound) return;
-
-        if (isLocationInFeature(location, feature)) {
-            state.gpsTimezone.feature = feature;
-            matchFound = true;
-        }
-    });
-
-    if(!matchFound) {
+    const bestFeature = findSmallestFeatureAtLatLng(location);
+    if (bestFeature) {
+        state.gpsTimezone.feature = bestFeature;
+    } else {
         console.warn("Could not find a timezone polygon for the current location.");
     }
 }
