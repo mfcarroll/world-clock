@@ -1,9 +1,12 @@
-import { mapStyles } from './map-styles';
+import { Loader } from '@googlemaps/js-api-loader';
+import { mapStyles } from './map-styles.ts';
 
 // --- CONFIGURATION ---
-const TIMEZONE_API_KEY = "W9EYNXL4UXY8";
-const TIMEZONE_GEOJSON_URL = 'https://raw.githubusercontent.com/evansiroky/timezone-boundary-builder/master/dist/timezones.geojson';
+const TIMEZONE_API_KEY = "W9EYNXL4UXY8"; 
+const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0"; 
 
+// FIX: Use the new, reliable GeoJSON URL you found
+const TIMEZONE_GEOJSON_URL = 'https://raw.githubusercontent.com/treyerl/timezones/refs/heads/master/timezones_wVVG8.geojson';
 
 // --- DOM ELEMENTS ---
 const latitudeEl = document.getElementById('latitude')!;
@@ -14,12 +17,10 @@ const localTimezoneEl = document.getElementById('local-timezone')!;
 const localDateEl = document.getElementById('local-date')!;
 const deviceTimeEl = document.getElementById('device-time')!;
 const deviceTimezoneEl = document.getElementById('device-timezone')!;
-
 const locationLoader = document.getElementById('location-loader')!;
 const timeLoader = document.getElementById('time-loader')!;
 const locationContent = document.getElementById('location-content')!;
 const timeContent = document.getElementById('time-content')!;
-
 const timezoneInput = document.getElementById('timezone-input') as HTMLInputElement;
 const addTimezoneBtn = document.getElementById('add-timezone-btn')!;
 const worldClocksContainer = document.getElementById('world-clocks-container')!;
@@ -29,41 +30,45 @@ const timezoneMapTitle = document.getElementById('timezone-map-title')!;
 // --- MAP & GEOLOCATION STATE ---
 let locationMap: google.maps.Map;
 let timezoneMap: google.maps.Map;
-let locationMarker: google.maps.Marker;
-let timezoneMapMarker: google.maps.Marker;
+let locationMarker: google.maps.marker.AdvancedMarkerElement;
+let timezoneMapMarker: google.maps.marker.AdvancedMarkerElement;
 
 let clocksInterval: number;
 let addedTimezones: string[] = ['America/New_York', 'Europe/London', 'Asia/Tokyo'];
 let lastFetchedCoords = { lat: 0, lon: 0 };
 
 // --- MAP INITIALIZATION ---
-function initMaps() {
+async function initMaps() {
   const initialCoords = { lat: 0, lng: 0 };
 
-  // 1. Initialize Location Map
-  locationMap = new google.maps.Map(document.getElementById('location-map')!, {
-    center: initialCoords,
-    zoom: 2,
-    styles: mapStyles,
-    disableDefaultUI: true,
-  });
-  locationMarker = new google.maps.Marker({ position: initialCoords, map: locationMap });
+  const { Map } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
+  const { AdvancedMarkerElement } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
 
-  // 2. Initialize Timezone Map
-  timezoneMap = new google.maps.Map(document.getElementById('timezone-map')!, {
+  locationMap = new Map(document.getElementById('location-map')!, {
     center: initialCoords,
     zoom: 2,
-    styles: mapStyles,
+    disableDefaultUI: true,
+    mapId: 'LOCATION_MAP' 
+  });
+  locationMarker = new AdvancedMarkerElement({ position: initialCoords, map: locationMap });
+
+  timezoneMap = new Map(document.getElementById('timezone-map')!, {
+    center: initialCoords,
+    zoom: 2,
     disableDefaultUI: true,
     zoomControl: true,
     streetViewControl: false,
+    mapId: 'TIMEZONE_MAP'
   });
-  timezoneMapMarker = new google.maps.Marker({ position: initialCoords, map: timezoneMap });
+  timezoneMapMarker = new AdvancedMarkerElement({ position: initialCoords, map: timezoneMap });
 
-  // 3. Load Timezone Boundaries GeoJSON
-  timezoneMap.data.loadGeoJson(TIMEZONE_GEOJSON_URL);
+  try {
+    timezoneMap.data.loadGeoJson(TIMEZONE_GEOJSON_URL);
+  } catch (error) {
+    console.error("Failed to load GeoJSON data:", error);
+    timezoneMapTitle.textContent = "Could not load timezone data";
+  }
 
-  // Style the timezone layer
   timezoneMap.data.setStyle({
     fillColor: '#4f46e5',
     fillOpacity: 0.1,
@@ -71,51 +76,43 @@ function initMaps() {
     strokeColor: '#818cf8',
   });
   
-  // Add hover effect to timezone layer
   timezoneMap.data.addListener('mouseover', (event: google.maps.Data.MouseEvent) => {
     timezoneMap.data.overrideStyle(event.feature, {
         strokeWeight: 3,
         strokeColor: '#f87171',
     });
-    const tzid = event.feature.getProperty('tzid');
-    timezoneMapTitle.textContent = `Timezone: ${tzid}`;
+    // The property in this new GeoJSON is 'tz_name'
+    const tzid = event.feature.getProperty('tz_name');
+    if (tzid) {
+        timezoneMapTitle.textContent = `Timezone: ${tzid}`;
+    }
   });
 
   timezoneMap.data.addListener('mouseout', () => {
     timezoneMap.data.revertStyle();
     timezoneMapTitle.textContent = 'World Timezone Map';
   });
-
-  // Start the main application logic
-  main();
 }
-// Expose initMaps to the global scope so the Maps API callback can find it
-(window as any).initMaps = initMaps;
-
 
 // --- GEOLOCATION & TIME LOGIC ---
-
 function onLocationSuccess(position: GeolocationPosition) {
   const { latitude, longitude } = position.coords;
   const currentPos = { lat: latitude, lng: longitude };
 
-  // Update UI
   latitudeEl.textContent = latitude.toFixed(6);
   longitudeEl.textContent = longitude.toFixed(6);
   locationLoader.classList.add('hidden');
   locationContent.classList.remove('hidden');
   locationErrorEl.classList.add('hidden');
   
-  // Update map markers and centers
-  locationMarker.setPosition(currentPos);
-  timezoneMapMarker.setPosition(currentPos);
+  locationMarker.position = currentPos;
+  timezoneMapMarker.position = currentPos;
   locationMap.setCenter(currentPos);
   locationMap.setZoom(14);
   timezoneMap.panTo(currentPos);
 
-  // Fetch timezone if location has changed significantly
   const dist = distance(latitude, longitude, lastFetchedCoords.lat, lastFetchedCoords.lon);
-  if (dist > 1) { // Refetch if moved > 1km
+  if (dist > 1) {
     console.log("Location changed, fetching new timezone...");
     lastFetchedCoords = { lat: latitude, lon: longitude };
     fetchTimezone(latitude, longitude);
@@ -148,14 +145,6 @@ function onLocationError(error: GeolocationPositionError) {
 }
 
 async function fetchTimezone(lat: number, lon: number) {
-  if (TIMEZONE_API_KEY === 'YOUR_TIMEZONEDB_API_KEY') {
-    console.error('TimeZoneDB API key is missing.');
-    locationErrorEl.textContent = 'TimeZone API key missing. Using browser default.';
-    locationErrorEl.classList.remove('hidden');
-    if (!clocksInterval) startClocks(Intl.DateTimeFormat().resolvedOptions().timeZone);
-    return;
-  }
-
   try {
     const response = await fetch(`https://api.timezonedb.com/v2.1/get-time-zone?key=${TIMEZONE_API_KEY}&format=json&by=position&lat=${lat}&lng=${lon}`);
     if (!response.ok) throw new Error('Network response was not ok.');
@@ -183,7 +172,6 @@ function startClocks(localTimezone: string) {
 function updateAllClocks(localTimezone: string) {
   const now = new Date();
 
-  // Update GPS-based Time
   try {
     localTimeEl.textContent = now.toLocaleTimeString('en-US', { timeZone: localTimezone });
     localDateEl.textContent = now.toLocaleDateString('en-US', { timeZone: localTimezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -193,7 +181,6 @@ function updateAllClocks(localTimezone: string) {
     localTimeEl.textContent = "Error";
   }
   
-  // Update Device Time
   const deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   deviceTimeEl.textContent = now.toLocaleTimeString('en-US');
   deviceTimezoneEl.textContent = deviceTz.replace(/_/g, ' ');
@@ -201,7 +188,6 @@ function updateAllClocks(localTimezone: string) {
   timeLoader.classList.add('hidden');
   timeContent.classList.remove('hidden');
 
-  // Update World Clocks
   addedTimezones.forEach(tz => {
     const el = document.getElementById(`clock-${tz.replace(/\//g, '-')}`);
     if (el) {
@@ -218,8 +204,6 @@ function updateAllClocks(localTimezone: string) {
   });
 }
 
-// --- HELPER FUNCTIONS ---
-
 function getTimezoneOffset(tz1: string, tz2: string): string {
   try {
     const now = new Date();
@@ -234,62 +218,74 @@ function getTimezoneOffset(tz1: string, tz2: string): string {
 }
 
 function distance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  if (!lat2 || !lon2) return Infinity; // Handle initial case
-  const R = 6371; // Radius of the earth in km
+  if (!lat2 || !lon2) return Infinity;
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = 0.5 - Math.cos(dLat) / 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * (1 - Math.cos(dLon)) / 2;
   return R * 2 * Math.asin(Math.sqrt(a));
 }
 
-// --- WORLD CLOCK UI ---
-
 function renderWorldClocks() {
-  worldClocksContainer.innerHTML = '';
-  addedTimezones.forEach(tz => {
-    const tzId = `clock-${tz.replace(/\//g, '-')}`;
-    const clockHTML = `
-      <div id="${tzId}" class="flex items-center justify-between bg-gray-700/50 p-3 rounded-lg">
-        <div>
-          <p class="text-lg font-medium text-white">${tz.replace(/_/g, ' ').split('/').pop()}</p>
-          <p class="text-sm text-gray-400">${tz.replace(/_/g, ' ').split('/')[0]}</p>
-        </div>
-        <div class="text-right">
-          <p class="time text-2xl font-semibold text-white font-mono">--:--</p>
-          <p class="date-diff text-sm text-gray-400">--, +/- hrs</p>
-        </div>
-        <button class="remove-btn ml-4 text-gray-500 hover:text-red-400 transition-colors" data-timezone="${tz}">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-        </button>
-      </div>`;
-    worldClocksContainer.insertAdjacentHTML('beforeend', clockHTML);
-  });
+    worldClocksContainer.innerHTML = '';
+    addedTimezones.forEach(tz => {
+        const tzId = `clock-${tz.replace(/\//g, '-')}`;
+        const clockHTML = `
+        <div id="${tzId}" class="flex items-center justify-between bg-gray-700/50 p-3 rounded-lg">
+            <div>
+            <p class="text-lg font-medium text-white">${tz.replace(/_/g, ' ').split('/').pop()}</p>
+            <p class="text-sm text-gray-400">${tz.replace(/_/g, ' ').split('/')[0]}</p>
+            </div>
+            <div class="text-right">
+            <p class="time text-2xl font-semibold text-white font-mono">--:--</p>
+            <p class="date-diff text-sm text-gray-400">--, +/- hrs</p>
+            </div>
+            <button class="remove-btn ml-4 text-gray-500 hover:text-red-400 transition-colors" data-timezone="${tz}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            </button>
+        </div>`;
+        worldClocksContainer.insertAdjacentHTML('beforeend', clockHTML);
+    });
 }
 
 function handleAddTimezone() {
-  const newTimezone = timezoneInput.value.trim();
-  const ianaTimezones = Intl.supportedValuesOf('timeZone');
-  if (newTimezone && !addedTimezones.includes(newTimezone) && ianaTimezones.includes(newTimezone)) {
-    addedTimezones.push(newTimezone);
-    renderWorldClocks();
-    const localTimezone = localTimezoneEl.textContent?.replace(/ /g, '_');
-    if (localTimezone && localTimezone !== '--_/_--') {
-      updateAllClocks(localTimezone);
+    const newTimezone = timezoneInput.value.trim();
+    const ianaTimezones = Intl.supportedValuesOf('timeZone');
+    if (newTimezone && !addedTimezones.includes(newTimezone) && ianaTimezones.includes(newTimezone)) {
+        addedTimezones.push(newTimezone);
+        renderWorldClocks();
+        const localTimezone = localTimezoneEl.textContent?.replace(/ /g, '_');
+        if (localTimezone && localTimezone !== '--_/_--') {
+          updateAllClocks(localTimezone);
+        }
+    } else if (newTimezone && !ianaTimezones.includes(newTimezone)) {
+        alert('Invalid or unsupported timezone. Please select from the list.');
     }
-  } else if (newTimezone && !ianaTimezones.includes(newTimezone)) {
-    alert('Invalid or unsupported timezone. Please select from the list.');
-  }
-  timezoneInput.value = '';
+    timezoneInput.value = '';
 }
+
 
 // --- MAIN APP INITIALIZATION ---
 
-function main() {
-  // Populate timezone datalist
+async function startApp() {
+  const loader = new Loader({
+    apiKey: GOOGLE_MAPS_API_KEY,
+    version: "weekly",
+  });
+
+  try {
+    await loader.load();
+    await initMaps();
+  } catch (error) {
+    console.error("Failed to load Google Maps API", error);
+    document.getElementById('location-map')!.innerHTML = '<span>Failed to load Google Maps. Please check your API key and network connection.</span>';
+    document.getElementById('timezone-map')!.innerHTML = '<span>Failed to load Google Maps. An ad blocker might be interfering.</span>';
+    return;
+  }
+
   const ianaTimezones = Intl.supportedValuesOf('timeZone');
   timezoneList.innerHTML = ianaTimezones.map(tz => `<option value="${tz}"></option>`).join('');
 
-  // Setup event listeners
   addTimezoneBtn.addEventListener('click', handleAddTimezone);
   timezoneInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleAddTimezone();
@@ -304,13 +300,14 @@ function main() {
     }
   });
 
-  // Initial render of clocks
   renderWorldClocks();
 
-  // Start watching for location
   navigator.geolocation.watchPosition(onLocationSuccess, onLocationError, {
     enableHighAccuracy: true,
     timeout: 10000,
     maximumAge: 0,
   });
 }
+
+startApp();
+

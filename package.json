@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@googlemaps/js-api-loader": "^1.16.6",
     "@types/google.maps": "^3.55.10",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
@@ -17,3 +18,4 @@
     "vite": "^5.2.0"
   }
 }
+
