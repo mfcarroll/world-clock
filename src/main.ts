@@ -5,7 +5,6 @@ import { mapStyles } from './map-styles.ts';
 const TIMEZONE_API_KEY = "W9EYNXL4UXY8"; 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0"; 
 
-// FIX: Use the new, reliable GeoJSON URL you found
 const TIMEZONE_GEOJSON_URL = 'https://raw.githubusercontent.com/treyerl/timezones/refs/heads/master/timezones_wVVG8.geojson';
 
 // --- DOM ELEMENTS ---
@@ -36,6 +35,11 @@ let timezoneMapMarker: google.maps.marker.AdvancedMarkerElement;
 let clocksInterval: number;
 let addedTimezones: string[] = ['America/New_York', 'Europe/London', 'Asia/Tokyo'];
 let lastFetchedCoords = { lat: 0, lon: 0 };
+
+// --- NEW: TIME OFFSET VARIABLE ---
+// This will store the difference between the server's time and the device's time.
+let timeOffset = 0;
+
 
 // --- MAP INITIALIZATION ---
 async function initMaps() {
@@ -81,7 +85,6 @@ async function initMaps() {
         strokeWeight: 3,
         strokeColor: '#f87171',
     });
-    // The property in this new GeoJSON is 'tz_name'
     const tzid = event.feature.getProperty('tz_name');
     if (tzid) {
         timezoneMapTitle.textContent = `Timezone: ${tzid}`;
@@ -169,20 +172,52 @@ function startClocks(localTimezone: string) {
   clocksInterval = setInterval(() => updateAllClocks(localTimezone), 1000);
 }
 
+// --- NEW: Fetch accurate time from a public API ---
+async function fetchAndSetTimeOffset() {
+  try {
+    // --- MODIFIED: Use the secure https protocol ---
+    const response = await fetch('https://worldtimeapi.org/api/ip');
+    if (!response.ok) throw new Error('Network response was not ok.');
+    
+    const data = await response.json();
+    
+    // Get the authoritative time in milliseconds
+    const serverTime = new Date(data.utc_datetime).getTime();
+    
+    // Get the device's current time in milliseconds
+    const localTime = new Date().getTime();
+    
+    // Calculate the difference
+    timeOffset = serverTime - localTime;
+    
+    console.log(`Time offset calculated: ${timeOffset}ms`);
+
+  } catch (error) {
+    console.error('Could not fetch accurate time from API. Falling back to device time.', error);
+    // If the API fails, the offset remains 0, and we use the device's time.
+    timeOffset = 0; 
+  }
+}
+
+
 function updateAllClocks(localTimezone: string) {
-  const now = new Date();
+  // --- MODIFIED: Apply the offset to get the corrected time ---
+  const correctedTime = new Date(new Date().getTime() + timeOffset);
 
   try {
-    localTimeEl.textContent = now.toLocaleTimeString('en-US', { timeZone: localTimezone });
-    localDateEl.textContent = now.toLocaleDateString('en-US', { timeZone: localTimezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    // Use the correctedTime for all "GPS Time" displays
+    localTimeEl.textContent = correctedTime.toLocaleTimeString('en-US', { timeZone: localTimezone });
+    localDateEl.textContent = correctedTime.toLocaleDateString('en-US', { timeZone: localTimezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     localTimezoneEl.textContent = localTimezone.replace(/_/g, ' ');
   } catch (e) {
     console.error(`Invalid local timezone: ${localTimezone}`, e);
     localTimeEl.textContent = "Error";
   }
   
+  // Device time continues to use the uncorrected local Date object
+  const deviceNow = new Date();
   const deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  deviceTimeEl.textContent = now.toLocaleTimeString('en-US');
+  deviceTimeEl.textContent = deviceNow.toLocaleTimeString('en-US');
   deviceTimezoneEl.textContent = deviceTz.replace(/_/g, ' ');
 
   timeLoader.classList.add('hidden');
@@ -192,8 +227,9 @@ function updateAllClocks(localTimezone: string) {
     const el = document.getElementById(`clock-${tz.replace(/\//g, '-')}`);
     if (el) {
       try {
-        const timeString = now.toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
-        const dateString = now.toLocaleDateString('en-US', { timeZone: tz, weekday: 'short' });
+        // Use the correctedTime for world clock displays
+        const timeString = correctedTime.toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+        const dateString = correctedTime.toLocaleDateString('en-US', { timeZone: tz, weekday: 'short' });
         const timeDiff = getTimezoneOffset(tz, localTimezone);
         el.querySelector('.time')!.textContent = timeString;
         el.querySelector('.date-diff')!.textContent = `${dateString}, ${timeDiff}`;
@@ -206,9 +242,10 @@ function updateAllClocks(localTimezone: string) {
 
 function getTimezoneOffset(tz1: string, tz2: string): string {
   try {
-    const now = new Date();
-    const offset1 = new Date(now.toLocaleString('en-US', { timeZone: tz1 })).getTime();
-    const offset2 = new Date(now.toLocaleString('en-US', { timeZone: tz2 })).getTime();
+    // --- MODIFIED: Use corrected time for offset calculation ---
+    const correctedTime = new Date(new Date().getTime() + timeOffset);
+    const offset1 = new Date(correctedTime.toLocaleString('en-US', { timeZone: tz1 })).getTime();
+    const offset2 = new Date(correctedTime.toLocaleString('en-US', { timeZone: tz2 })).getTime();
     const diffHours = (offset1 - offset2) / 3600000;
     if (Math.abs(diffHours) < 0.01) return 'Same as GPS';
     return `${diffHours > 0 ? '+' : ''}${diffHours} hrs`;
@@ -268,6 +305,9 @@ function handleAddTimezone() {
 // --- MAIN APP INITIALIZATION ---
 
 async function startApp() {
+  // --- MODIFIED: Fetch accurate time right at the start ---
+  await fetchAndSetTimeOffset();
+
   const loader = new Loader({
     apiKey: GOOGLE_MAPS_API_KEY,
     version: "weekly",
@@ -310,4 +350,3 @@ async function startApp() {
 }
 
 startApp();
-
