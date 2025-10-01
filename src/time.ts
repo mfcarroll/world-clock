@@ -2,6 +2,7 @@
 
 import * as dom from './dom';
 import { state } from './state';
+import { updateMapHighlights } from './map'; // Assuming map.ts exports this
 
 const TIMEZONE_API_KEY = "W9EYNXL4UXY8";
 
@@ -11,9 +12,7 @@ export function startClocks(localTimezone: string) {
   state.clocksInterval = setInterval(() => updateAllClocks(localTimezone), 1000);
 }
 
-// --- REMOVED: The redundant fetchAndSetTimeOffset function has been deleted ---
-
-// --- REFACTORED: Now calculates the time offset from the first successful API call ---
+// --- REFACTORED: Now correctly calculates UTC time from the API response ---
 export async function fetchTimezoneForCoordinates(lat: number, lon: number): Promise<string | null> {
   console.log(`Fetching timezone for Lat: ${lat}, Lon: ${lon}`);
   try {
@@ -28,9 +27,10 @@ export async function fetchTimezoneForCoordinates(lat: number, lon: number): Pro
     if (data.status === 'OK') {
       // If this is the first successful fetch, calculate the time offset.
       if (state.timeOffset === 0 && data.timestamp) {
-        const serverTime = data.timestamp * 1000; // API returns seconds, we need milliseconds
-        const localTime = new Date().getTime();
-        state.timeOffset = serverTime - localTime;
+        // The API's timestamp is local, so convert it to UTC by subtracting the zone's offset.
+        const serverUtcTime = (data.timestamp - data.gmtOffset) * 1000;
+        const localDeviceTime = new Date().getTime();
+        state.timeOffset = serverUtcTime - localDeviceTime;
         console.log(`Time offset calculated from TimeZoneDB: ${state.timeOffset}ms`);
       }
       return data.zoneName;

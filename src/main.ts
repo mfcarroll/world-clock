@@ -4,7 +4,6 @@ import { Loader } from '@googlemaps/js-api-loader';
 import * as dom from './dom';
 import { state } from './state';
 import { initMaps, onLocationError, onLocationSuccess } from './map';
-// --- REMOVED: No longer importing fetchAndSetTimeOffset ---
 import { updateAllClocks } from './time';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0"; 
@@ -36,13 +35,21 @@ function renderWorldClocks() {
     });
 }
 
+// --- NEW: Helper function to add a timezone to the list if it's not already there ---
+function addUniqueTimezoneToList(tz: string) {
+    if (tz && !state.addedTimezones.includes(tz)) {
+        state.addedTimezones.push(tz);
+        state.addedTimezones.sort(); // Keep the list sorted alphabetically
+        saveTimezones();
+        renderWorldClocks();
+    }
+}
+
 function handleAddTimezone() {
     const newTimezone = dom.timezoneInput.value.trim();
     const ianaTimezones = Intl.supportedValuesOf('timeZone');
     if (newTimezone && !state.addedTimezones.includes(newTimezone) && ianaTimezones.includes(newTimezone)) {
-        state.addedTimezones.push(newTimezone);
-        saveTimezones();
-        renderWorldClocks();
+        addUniqueTimezoneToList(newTimezone);
         const localTimezone = dom.localTimezoneEl.textContent?.replace(/ /g, '_');
         if (localTimezone && localTimezone !== '--_/_--') {
           updateAllClocks(localTimezone);
@@ -55,8 +62,6 @@ function handleAddTimezone() {
 
 
 async function startApp() {
-  // --- REMOVED: The call to fetchAndSetTimeOffset is no longer needed ---
-
   const loader = new Loader({
     apiKey: GOOGLE_MAPS_API_KEY,
     version: "weekly",
@@ -88,6 +93,17 @@ async function startApp() {
       saveTimezones();
       renderWorldClocks();
     }
+  });
+
+  // --- NEW: Listen for the custom event from the map module ---
+  document.addEventListener('gpstimezonefound', (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { tzid } = customEvent.detail;
+
+      // Add both the GPS and device timezones to the list
+      addUniqueTimezoneToList(tzid);
+      const deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      addUniqueTimezoneToList(deviceTz);
   });
 
   renderWorldClocks();

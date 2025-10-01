@@ -32,7 +32,6 @@ export async function initMaps() {
   });
   state.timezoneMapMarker = new AdvancedMarkerElement({ position: initialCoords, map: state.timezoneMap });
 
-  // --- MODIFIED: Load the GeoJSON in the background ---
   loadGeoJsonAsync();
 
   state.timezoneMap.data.setStyle({
@@ -60,10 +59,10 @@ export async function initMaps() {
     });
     
     const nameProp = event.feature.getProperty('name');
-    const hoverTzid = typeof nameProp === 'string' ? `UTC ${nameProp}` : 'Unknown';
+    const hoverText = typeof nameProp === 'string' ? `UTC ${nameProp}` : 'Unknown';
 
-    if (hoverTzid && hoverTzid !== state.selectedTimezone.tzid) {
-        dom.hoverTimezoneDetailsEl.innerHTML = `<p class="font-semibold">${hoverTzid}</p>`;
+    if (hoverText && hoverText !== state.selectedTimezone.tzid) {
+        dom.hoverTimezoneDetailsEl.innerHTML = `<p class="font-semibold">${hoverText}</p>`;
         dom.hoverTimezoneDetailsEl.classList.remove('hidden');
     }
   });
@@ -75,7 +74,6 @@ export async function initMaps() {
   });
 }
 
-// --- NEW: Asynchronous function to load GeoJSON ---
 async function loadGeoJsonAsync() {
     try {
         console.log("Starting background download of GeoJSON...");
@@ -92,26 +90,39 @@ async function loadGeoJsonAsync() {
     }
 }
 
+// --- MODIFIED: Implemented the new simplified display logic ---
 export function updateMapHighlights() {
     if (!state.timezoneMap) return;
     
     state.timezoneMap.data.revertStyle();
+    dom.selectedTimezoneDetailsEl.innerHTML = ''; // Clear details first
 
-    if (state.selectedTimezone.feature && state.selectedTimezone.tzid) {
+    if (state.selectedTimezone.tzid) {
         const { feature, tzid } = state.selectedTimezone;
         
-        state.timezoneMap.data.overrideStyle(feature, {
-            fillColor: '#f59e0b',
-            fillOpacity: 0.4,
-            strokeWeight: 3,
-            strokeColor: '#fcd34d',
-        });
+        if (feature) {
+            state.timezoneMap.data.overrideStyle(feature, {
+                fillColor: '#f59e0b',
+                fillOpacity: 0.4,
+                strokeWeight: 3,
+                strokeColor: '#fcd34d',
+            });
+        }
         
         const offset = getTimezoneOffset(tzid, 'UTC');
-        dom.selectedTimezoneDetailsEl.innerHTML = `
-            <p class="font-semibold text-white">${tzid.replace(/_/g, ' ')}</p>
-            <p>Offset from UTC: ${offset}</p>
-        `;
+        
+        if (tzid.startsWith('Etc/GMT')) {
+            // For GMT zones, show only the offset as the main title
+            dom.selectedTimezoneDetailsEl.innerHTML = `
+                <p class="font-semibold text-white">${offset}</p>
+            `;
+        } else {
+            // For named zones, show the name and the offset
+            dom.selectedTimezoneDetailsEl.innerHTML = `
+                <p class="font-semibold text-white">${tzid.replace(/_/g, ' ')}</p>
+                <p>${offset}</p>
+            `;
+        }
     }
 }
 
@@ -142,6 +153,9 @@ export async function onLocationSuccess(position: GeolocationPosition) {
     const tzid = await fetchTimezoneForCoordinates(latitude, longitude);
     if (tzid) {
       startClocks(tzid);
+      // --- MODIFIED: Automatically select and display the GPS timezone ---
+      state.selectedTimezone = { tzid, feature: null }; // No feature to highlight yet, but we have the name
+      updateMapHighlights();
     }
   }
 }
