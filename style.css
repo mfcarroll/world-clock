@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Inter", sans-serif;
+}
+
+/* Simple scrollbar styling for a better look */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1f2937; /* gray-800 */
+}
+::-webkit-scrollbar-thumb {
+  background: #4b5563; /* gray-600 */
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280; /* gray-500 */
+}
+
+.card {
+  @apply bg-gray-800/80 backdrop-blur-sm border border-gray-600/50 rounded-2xl shadow-lg;
+}
+
+.skeleton {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* GMAPS InfoWindow Styling */
+.gm-style-iw {
+    @apply bg-gray-800 !important;
+}
+.gm-style-iw-d {
+    @apply bg-gray-800 text-gray-200 !important;
+    overflow: hidden !important;
+}
+.gm-style-iw-c {
+    @apply bg-gray-800 !important;
+}
+.gm-style-iw-t::after {
+    @apply bg-gray-800 !important;
+}
