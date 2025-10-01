@@ -16,30 +16,44 @@ function renderWorldClocks() {
     dom.worldClocksContainer.innerHTML = '';
     const template = document.getElementById('world-clock-template') as HTMLTemplateElement;
 
-    state.addedTimezones.forEach(tz => {
+    const timezonesToRender = [...state.addedTimezones];
+    if (state.temporaryTimezone && !timezonesToRender.includes(state.temporaryTimezone)) {
+        timezonesToRender.push(state.temporaryTimezone);
+    }
+    timezonesToRender.sort();
+
+    timezonesToRender.forEach(tz => {
         const clone = template.content.cloneNode(true) as DocumentFragment;
         
         const clockDiv = clone.querySelector('.grid')!;
         const cityEl = clone.querySelector('.city')!;
         const regionEl = clone.querySelector('.region')!;
         const removeBtn = clone.querySelector('.remove-btn')!;
+        const pinBtn = clone.querySelector('.pin-btn')!;
 
         clockDiv.id = `clock-${tz.replace(/\//g, '-')}`;
-        removeBtn.setAttribute('data-timezone', tz);
         
         const tzParts = tz.replace(/_/g, ' ').split('/');
         cityEl.textContent = tzParts[tzParts.length - 1];
         regionEl.textContent = tzParts[0];
 
+        if (tz === state.temporaryTimezone && !state.addedTimezones.includes(tz)) {
+            clockDiv.classList.add('bg-amber-800/50');
+            removeBtn.classList.add('hidden');
+            pinBtn.classList.remove('hidden');
+            pinBtn.setAttribute('data-timezone', tz);
+        } else {
+            removeBtn.setAttribute('data-timezone', tz);
+        }
+
         dom.worldClocksContainer.appendChild(clone);
     });
 }
 
-// --- NEW: Helper function to add a timezone to the list if it's not already there ---
 function addUniqueTimezoneToList(tz: string) {
     if (tz && !state.addedTimezones.includes(tz)) {
         state.addedTimezones.push(tz);
-        state.addedTimezones.sort(); // Keep the list sorted alphabetically
+        state.addedTimezones.sort();
         saveTimezones();
         renderWorldClocks();
     }
@@ -86,24 +100,32 @@ async function startApp() {
   });
 
   dom.worldClocksContainer.addEventListener('click', (e) => {
-    const removeBtn = (e.target as HTMLElement).closest('.remove-btn');
+    const target = e.target as HTMLElement;
+    const removeBtn = target.closest('.remove-btn');
+    const pinBtn = target.closest('.pin-btn');
+
     if (removeBtn) {
       const timezoneToRemove = (removeBtn as HTMLElement).dataset.timezone!;
       state.addedTimezones = state.addedTimezones.filter(tz => tz !== timezoneToRemove);
       saveTimezones();
       renderWorldClocks();
+    } else if (pinBtn) {
+        const timezoneToPin = (pinBtn as HTMLElement).dataset.timezone!;
+        addUniqueTimezoneToList(timezoneToPin);
+        state.temporaryTimezone = null;
+        renderWorldClocks();
     }
   });
 
-  // --- NEW: Listen for the custom event from the map module ---
   document.addEventListener('gpstimezonefound', (e: Event) => {
       const customEvent = e as CustomEvent;
       const { tzid } = customEvent.detail;
-
-      // Add both the GPS and device timezones to the list
-      addUniqueTimezoneToList(tzid);
       const deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       addUniqueTimezoneToList(deviceTz);
+  });
+  
+  document.addEventListener('temporarytimezonechanged', (e: Event) => {
+      renderWorldClocks();
   });
 
   renderWorldClocks();

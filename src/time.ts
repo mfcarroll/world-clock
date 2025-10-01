@@ -63,7 +63,12 @@ export function updateAllClocks(localTimezone: string) {
   dom.timeLoader.classList.add('hidden');
   dom.timeContent.classList.remove('hidden');
 
-  state.addedTimezones.forEach(tz => {
+  const timezonesToUpdate = [...state.addedTimezones];
+    if (state.temporaryTimezone && !timezonesToUpdate.includes(state.temporaryTimezone)) {
+        timezonesToUpdate.push(state.temporaryTimezone);
+    }
+
+  timezonesToUpdate.forEach(tz => {
     const el = document.getElementById(`clock-${tz.replace(/\//g, '-')}`);
     if (el) {
       try {

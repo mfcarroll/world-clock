@@ -8,7 +8,6 @@ export default defineConfig({
       key: fs.readFileSync('./localhost-key.pem'),
       cert: fs.readFileSync('./localhost.pem'),
     },
-    // --- NEW: Add the proxy configuration ---
     proxy: {
       '/api/timezone': {
         target: 'https://api.timezonedb.com',
