@@ -19,4 +19,10 @@ export const state = {
   temporaryTimezone: null as string | null,
   geoJsonData: null as any,
   geoJsonLoaded: false,
+
+  // Restored state variables
+  selectedZone: null as number | null,
+  hoveredZone: null as number | null,
+  gpsZone: null as number | null,
+  gpsTzid: null as string | null,
 };
