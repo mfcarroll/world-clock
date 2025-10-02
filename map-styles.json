@@ -2,49 +2,60 @@
   "variant": "dark",
   "styles": [
     {
-      "id": "natural.landcover",
-      "geometry": {
-        "fillColor": "#212121"
-      }
-    },
-    {
-      "id": "natural.water",
-      "geometry": {
-        "fillColor": "#000000"
-      }
-    },
-    {
-      "id": "administrative",
-      "geometry": {
-        "fillColor": "#757575",
+      "id": "infrastructure",
+      "label": {
         "visible": false
       }
     },
     {
-      "id": "road",
-      "geometry": {
-        "fillColor": "#3c3c3c"
-      },
+      "id": "natural",
       "label": {
-        "textFillColor": "#8a8a8a"
+        "visible": false
       }
     },
     {
       "id": "pointOfInterest",
-      "label": {
-        "visible": false
-      }
-    },
-    {
-      "id": "transit",
-      "label": {
-        "visible": false
-      }
-    },
-    {
-      "id": "building",
       "geometry": {
-        "fillColor": "#282828"
+        "visible": true
+      },
+      "label": {
+        "visible": false
+      }
+    },
+    {
+      "id": "political",
+      "label": {
+        "visible": true
+      }
+    },
+    {
+      "id": "political.city",
+      "label": {
+        "visible": false
+      }
+    },
+    {
+      "id": "political.landParcel",
+      "geometry": {
+        "visible": true
+      }
+    },
+    {
+      "id": "political.neighborhood",
+      "label": {
+        "visible": false
+      }
+    },
+    {
+      "id": "political.reservation",
+      "label": {
+        "visible": false
+      }
+    },
+    {
+      "id": "political.sublocality",
+      "label": {
+        "visible": false
       }
     }
   ]
