@@ -234,8 +234,8 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
     let foundMatch = false;
     state.timezoneMap?.data.forEach((feature) => {
         if (foundMatch) return;
-        const featureTzid = feature.getProperty('tz_name1st');
-        if (featureTzid) {
+        const featureTzid = feature.getProperty('tz_name1st') as string | null;
+        if (featureTzid && typeof featureTzid === 'string') {
             const offsetString = getTimezoneOffset(featureTzid, tzid);
             if (offsetString === 'Same time') {
                 state.gpsZone = feature.getProperty('zone') as number;
