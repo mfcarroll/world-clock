@@ -97,6 +97,22 @@ export function getUtcOffset(timeZone: string): number {
     }
 }
 
+// ADDED: A helper to get a valid timezone name for offset calculation
+export function getValidTimezoneName(tzid: string | null, zone: number): string {
+    if (tzid && tzid.trim() !== '') {
+        try {
+            // Test if the tzid is valid
+            new Intl.DateTimeFormat('en-US', { timeZone: tzid });
+            return tzid;
+        } catch (e) {
+            // Fallback if tzid is invalid
+        }
+    }
+    // Fallback for null, empty, or invalid tzid
+    const sign = zone <= 0 ? '+' : '-';
+    return `Etc/GMT${sign}${Math.abs(zone)}`;
+}
+
 
 export function getTimezoneOffset(tz1: string, tz2: string | null): string {
   if (!tz2) return '';

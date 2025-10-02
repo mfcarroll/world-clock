@@ -2,7 +2,7 @@
 
 import * as dom from './dom';
 import { state } from './state';
-import { fetchTimezoneForCoordinates, startClocks, getTimezoneOffset, getFormattedTime } from './time';
+import { fetchTimezoneForCoordinates, startClocks, getTimezoneOffset, getFormattedTime, getUtcOffset, getValidTimezoneName } from './time';
 import { darkModeStyles } from './map-styles';
 
 let userTimeInterval: number | null = null;
@@ -31,7 +31,7 @@ function updateCard(
     nameEl.textContent = city || region;
 
     if (valueType === 'offset') {
-      const tempTz = tzid ? tzid : `Etc/GMT${zone <= 0 ? '+' : '-'}${Math.abs(zone)}`;
+      const tempTz = getValidTimezoneName(tzid, zone);
       valueEl.textContent = getTimezoneOffset(tempTz, referenceTz);
     }
 
@@ -93,7 +93,8 @@ async function setupTimezoneMapListeners() {
   state.timezoneMap.data.addGeoJson(state.geoJsonData);
   
   state.timezoneMap.data.addListener('mouseover', (event: google.maps.Data.MouseEvent) => {
-    state.hoveredZone = event.feature.getProperty('zone') as number;
+    // UPDATED: Use current_offset instead of zone
+    state.hoveredZone = event.feature.getProperty('current_offset') as number;
     updateMapHighlights();
     updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, event.feature, 'offset');
   });
@@ -107,21 +108,18 @@ async function setupTimezoneMapListeners() {
   state.timezoneMap.data.addListener('click', (event: google.maps.Data.MouseEvent) => {
     const feature = event.feature;
     const tzid = feature.getProperty('tz_name1st') as string | null;
+    // UPDATED: Use current_offset instead of zone
+    const currentOffset = feature.getProperty('current_offset') as number;
     const zone = feature.getProperty('zone') as number;
   
-    if (state.selectedZone === zone) {
+    if (state.selectedZone === currentOffset) {
       state.selectedZone = null;
       state.temporaryTimezone = null;
       updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, null, 'offset');
     } else {
-      state.selectedZone = zone;
-      if (tzid) {
-        state.temporaryTimezone = tzid;
-      } else {
-        const sign = zone <= 0 ? '+' : '-';
-        const offset = Math.abs(zone);
-        state.temporaryTimezone = `Etc/GMT${sign}${offset}`;
-      }
+      // UPDATED: Use current_offset instead of zone
+      state.selectedZone = currentOffset;
+      state.temporaryTimezone = getValidTimezoneName(tzid, zone);
       updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, feature, 'offset');
     }
   
@@ -132,27 +130,29 @@ async function setupTimezoneMapListeners() {
 
 function updateMapHighlights() {
     state.timezoneMap!.data.setStyle(feature => {
-        const featureZone = feature.getProperty('zone') as number;
+        // UPDATED: Use current_offset instead of zone
+        const featureOffset = feature.getProperty('current_offset') as number;
         let zIndex = 1;
         let fillColor = 'transparent';
         let strokeColor = 'rgba(255, 255, 255, 0.2)'; 
         let strokeWeight = 1;
 
-        if (state.gpsZone !== null && state.gpsZone === featureZone) {
+        // UPDATED: Use current_offset for all comparisons
+        if (state.gpsZone !== null && state.gpsZone === featureOffset) {
             fillColor = 'rgba(63, 128, 255, 0.7)';
             strokeColor = 'transparent';
             strokeWeight = 2;
             zIndex = 1;
         }
         
-        if (state.hoveredZone !== null && state.hoveredZone === featureZone) {
+        if (state.hoveredZone !== null && state.hoveredZone === featureOffset) {
             fillColor = 'rgba(255, 255, 255, 0.5)';
             strokeColor = 'transparent';
             strokeWeight = 2;
             zIndex = 2;
         }
 
-        if (state.selectedZone !== null && state.selectedZone === featureZone) {
+        if (state.selectedZone !== null && state.selectedZone === featureOffset) {
             fillColor = 'rgba(255, 215, 0, 0.7)';
             strokeColor = 'transparent';
             strokeWeight = 2;
@@ -172,7 +172,18 @@ async function loadTimezoneGeoJson() {
   if (state.geoJsonLoaded) return;
   try {
     const response = await fetch('timezones.geojson');
-    state.geoJsonData = await response.json();
+    const geoJson = await response.json();
+
+    // --- ADDED: Augment the GeoJSON data with the current offset ---
+    geoJson.features.forEach((feature: any) => {
+        const tzid = feature.properties.tz_name1st;
+        const zone = feature.properties.zone;
+        const validTimezone = getValidTimezoneName(tzid, zone);
+        feature.properties.current_offset = getUtcOffset(validTimezone);
+    });
+    // --- END ADDED SECTION ---
+
+    state.geoJsonData = geoJson;
     state.geoJsonLoaded = true;
     console.log('Timezone GeoJSON has finished loading and is ready.');
 
@@ -227,24 +238,8 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
     
     updateUserTimezoneDetails(tzid);
 
-    if (state.timezoneMap?.data) {
-        let foundMatch = false;
-        // UPDATED: Convert map data to an array first, then loop over the array
-        const features: google.maps.Data.Feature[] = [];
-        state.timezoneMap.data.forEach(feature => features.push(feature));
-
-        for (const feature of features) {
-            if (foundMatch) break;
-            const featureTzid = feature.getProperty('tz_name1st') as string | null;
-            if (featureTzid && typeof featureTzid === 'string') {
-                const offsetString = getTimezoneOffset(featureTzid, tzid);
-                if (offsetString === 'Same time') {
-                    state.gpsZone = feature.getProperty('zone') as number;
-                    foundMatch = true;
-                }
-            }
-        }
-    }
+    // UPDATED: Use getUtcOffset to find the gpsZone
+    state.gpsZone = getUtcOffset(tzid);
     
     updateMapHighlights();
 
@@ -254,35 +249,5 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
     state.localTimezone = tzid;
     state.gpsTzid = tzid;
     startClocks();
-  }
-
-  const initialTimezonesStr = sessionStorage.getItem('initialTimezones');
-  if (initialTimezonesStr && tzid && state.timezoneMap?.data) {
-      const initialTimezones = JSON.parse(initialTimezonesStr);
-      const targetTz = initialTimezones.find((tz: string) => tz !== tzid);
-
-      if (targetTz) {
-          let targetFeature: google.maps.Data.Feature | null = null;
-          // UPDATED: Convert map data to an array first, then loop over the array
-          const features: google.maps.Data.Feature[] = [];
-          state.timezoneMap.data.forEach(feature => features.push(feature));
-
-          for (const feature of features) {
-              if (feature.getProperty('tz_name1st') === targetTz) {
-                  targetFeature = feature;
-                  break;
-              }
-          }
-
-          if (targetFeature) {
-              const zone = targetFeature.getProperty('zone') as number;
-              state.selectedZone = zone;
-              state.temporaryTimezone = targetTz;
-              updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, targetFeature, 'offset');
-              updateMapHighlights();
-              document.dispatchEvent(new CustomEvent('temporarytimezonechanged'));
-          }
-      }
-      sessionStorage.removeItem('initialTimezones');
   }
 }
