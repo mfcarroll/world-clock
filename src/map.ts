@@ -67,27 +67,21 @@ function updateUserTimezoneDetails(tzid: string) {
 
 export async function initMaps() {
   const { Map } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
-  // UPDATED: Import the classic Marker class
   const { Marker } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
 
-  // Define your map options in a separate object
   const mapOptions: google.maps.MapOptions = {
     center: { lat: 0, lng: 0 },
     zoom: 2,
     styles: darkModeStyles,
     disableDefaultUI: true,
-    zoomControl: true,
+    // UPDATED: Set zoomControl to false
+    zoomControl: false,
   };
 
-  // Initialize Location Map
   state.locationMap = new Map(document.getElementById('location-map') as HTMLElement, mapOptions);
-  // UPDATED: Use the classic Marker
   state.locationMarker = new Marker({ map: state.locationMap, position: { lat: 0, lng: 0 } });
 
-
-  // Initialize Timezone Map
   state.timezoneMap = new Map(document.getElementById('timezone-map') as HTMLElement, mapOptions);
-  // UPDATED: Use the classic Marker
   state.timezoneMapMarker = new Marker({ map: state.timezoneMap, position: { lat: 0, lng: 0 } });
 
   setupTimezoneMapListeners();
@@ -142,26 +136,26 @@ function updateMapHighlights() {
         const featureZone = feature.getProperty('zone') as number;
         let zIndex = 1;
         let fillColor = 'transparent';
-        let strokeColor = 'rgba(255, 255, 255, 0.5)';
+        let strokeColor = 'rgba(255, 255, 255, 0.2)'; 
         let strokeWeight = 1;
 
         if (state.gpsZone !== null && state.gpsZone === featureZone) {
-            fillColor = 'rgba(0, 0, 255, 0.3)';
-            strokeColor = 'blue';
+            fillColor = 'rgba(63, 128, 255, 0.7)';
+            strokeColor = 'transparent';
             strokeWeight = 2;
             zIndex = 1;
         }
         
         if (state.hoveredZone !== null && state.hoveredZone === featureZone) {
-            fillColor = 'rgba(255, 255, 255, 0.3)';
-            strokeColor = 'white';
+            fillColor = 'rgba(255, 255, 255, 0.5)';
+            strokeColor = 'transparent';
             strokeWeight = 2;
             zIndex = 2;
         }
 
         if (state.selectedZone !== null && state.selectedZone === featureZone) {
-            fillColor = 'rgba(255, 255, 0, 0.3)';
-            strokeColor = 'yellow';
+            fillColor = 'rgba(255, 215, 0, 0.7)';
+            strokeColor = 'transparent';
             strokeWeight = 2;
             zIndex = 3;
         }
@@ -193,7 +187,6 @@ function updateLocationMap(lat: number, lon: number) {
     const pos = { lat, lng: lon };
     state.locationMap.setCenter(pos);
     state.locationMap.setZoom(12);
-    // UPDATED: Use setPosition() for classic markers
     state.locationMarker.setPosition(pos);
   }
 }
@@ -202,7 +195,6 @@ function updateTimezoneMapMarker(lat: number, lon: number) {
   if (state.timezoneMap && state.timezoneMapMarker) {
     const pos = { lat, lng: lon };
     state.timezoneMap.setCenter(pos);
-    // UPDATED: Use setPosition() for classic markers
     state.timezoneMapMarker.setPosition(pos);
   }
 }
