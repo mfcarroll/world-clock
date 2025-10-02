@@ -1,13 +1,12 @@
-// vite.config.js
 import { defineConfig } from 'vite';
-import fs from 'fs';
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  server: {
-    https: {
-      key: fs.readFileSync('./localhost-key.pem'),
-      cert: fs.readFileSync('./localhost.pem'),
-    },
-  },
+export default defineConfig(({ command }) => {
+  return {
+    // Use a conditional base path.
+    // In 'serve' (development) mode, use the root '/'.
+    // In 'build' (production) mode, use the repository name.
+    base: command === 'serve' ? '/' : '/world-clock/',
+    plugins: [],
+  };
 });
