@@ -5,7 +5,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 import * as dom from './dom';
 import { state } from './state';
 import { initMaps, onLocationError, onLocationSuccess } from './map';
-import { updateAllClocks, syncClock, getUtcOffset } from './time';
+import { updateAllClocks, getUtcOffset, syncClock } from './time';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
@@ -41,24 +41,35 @@ function renderWorldClocks() {
         const clockDiv = clone.querySelector('.grid')!;
         
         clockDiv.id = `clock-${tz.replace(/\//g, '-')}`;
+        
+        if (tz === state.gpsTzid) {
+            clockDiv.classList.remove('border-transparent');
+            clockDiv.classList.add('border-blue-500');
+        }
 
-        const city = tz.split('/').pop()?.replace(/_/g, ' ') || 'Unknown';
-        clone.querySelector('.city')!
-.textContent = city;
+        let city = tz.split('/').pop()?.replace(/_/g, ' ') || 'Unknown';
+        if (tz.startsWith('Etc/GMT')) {
+            const offsetMatch = tz.match(/[+-]\d+/);
+            if (offsetMatch) {
+                const offset = -parseInt(offsetMatch[0], 10);
+                city = `UTC${offset >= 0 ? '+' : ''}${offset}`;
+            }
+        }
+
+        clone.querySelector('.city')!.textContent = city;
         const removeBtn = clone.querySelector('.remove-btn') as HTMLElement;
         const pinBtn = clone.querySelector('.pin-btn') as HTMLElement;
 
         removeBtn.dataset.timezone = tz;
         pinBtn.dataset.timezone = tz;
 
-        // *** FIX: Show the correct button based on the timezone type ***
         if (tz === state.temporaryTimezone) {
             clockDiv.classList.add('bg-yellow-800', 'bg-opacity-50', 'border', 'border-yellow-500');
-            removeBtn.classList.add('hidden'); // Hide the 'x'
-            pinBtn.classList.remove('hidden'); // Show the '+'
+            removeBtn.classList.add('hidden');
+            pinBtn.classList.remove('hidden');
         } else {
-            removeBtn.classList.remove('hidden'); // Show the 'x'
-            pinBtn.classList.add('hidden'); // Hide the '+'
+            removeBtn.classList.remove('hidden');
+            pinBtn.classList.add('hidden');
         }
 
         dom.worldClocksContainerEl.appendChild(clone);
@@ -78,7 +89,6 @@ function handleAddTimezone() {
     }
     dom.timezoneInput.value = '';
 }
-
 
 async function startApp() {
   await syncClock();
@@ -111,7 +121,6 @@ async function startApp() {
 
     if (removeBtn) {
       const timezoneToRemove = (removeBtn as HTMLElement).dataset.timezone!;
-      // If the removed timezone is the temporary one, clear it from the state
       if (timezoneToRemove === state.temporaryTimezone) {
           state.temporaryTimezone = null;
       } else {
@@ -136,6 +145,8 @@ async function startApp() {
   document.addEventListener('gpstimezonefound', (e) => {
     const { tzid } = (e as CustomEvent).detail;
     dom.localTimezoneEl.textContent = tzid.replace(/_/g, ' ');
+    addUniqueTimezoneToList(tzid);
+    renderWorldClocks();
   });
 
   renderWorldClocks();

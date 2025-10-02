@@ -2,61 +2,63 @@
 
 import * as dom from './dom';
 import { state } from './state';
-import { fetchTimezoneForCoordinates, startClocks, getTimezoneOffset } from './time';
+import { fetchTimezoneForCoordinates, startClocks, getTimezoneOffset, getFormattedTime } from './time';
+
+let userTimeInterval: number | null = null;
 
 // --- HELPER FUNCTIONS ---
 
-function updateTimezoneDetails(element: HTMLElement, feature: google.maps.Data.Feature | null) {
+function updateCard(
+  cardEl: HTMLElement,
+  nameEl: HTMLElement,
+  valueEl: HTMLElement,
+  feature: google.maps.Data.Feature | null,
+  valueType: 'offset' | 'time'
+) {
   if (feature) {
     const tzid = feature.getProperty('tz_name1st') as string | null;
     const zone = feature.getProperty('zone') as number;
+    const referenceTz = state.gpsTzid || Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     let displayName = tzid;
-    let offsetDisplay: string;
-
-    if (tzid) {
-      const referenceTz = state.gpsTzid || Intl.DateTimeFormat().resolvedOptions().timeZone;
-      offsetDisplay = getTimezoneOffset(tzid, referenceTz);
-    } else {
-      // Fallback for shapes with no name
+    if (!tzid) {
       displayName = `UTC${zone >= 0 ? '+' : ''}${zone}`;
-      offsetDisplay = `UTC${zone >= 0 ? '+' : ''}${zone}`;
     }
-
+    
     const region = displayName?.split('/')[0].replace(/_/g, ' ') || 'Unknown';
     const city = displayName?.split('/')[1]?.replace(/_/g, ' ') || '';
+    nameEl.textContent = city || region;
 
-    element.innerHTML = `
-      <div class="text-lg font-bold">${city || region}</div>
-      <div class="text-sm">${offsetDisplay}</div>
-    `;
-    element.classList.remove('hidden');
+    if (valueType === 'offset') {
+      const tempTz = tzid ? tzid : `Etc/GMT${zone <= 0 ? '+' : '-'}${Math.abs(zone)}`;
+      valueEl.textContent = getTimezoneOffset(tempTz, referenceTz);
+    }
+
+    cardEl.classList.remove('hidden');
   } else {
-    element.innerHTML = '';
-    element.classList.add('hidden');
+    cardEl.classList.add('hidden');
+    nameEl.textContent = '';
+    valueEl.textContent = '';
   }
 }
 
-function selectTimezone(feature: google.maps.Data.Feature | null) {
-  if (!feature) return;
+function updateUserTimezoneDetails(tzid: string) {
+  const city = tzid.split('/').pop()?.replace(/_/g, ' ') || 'Unknown';
+  dom.userTimezoneNameEl.textContent = city;
+  dom.userTimezoneDetailsEl.classList.remove('hidden');
 
-  const tzid = feature.getProperty('tz_name1st') as string | null;
-  const zone = feature.getProperty('zone') as number;
+  if (userTimeInterval) clearInterval(userTimeInterval);
 
-  state.selectedZone = zone;
+  const updateTime = () => {
+    dom.userTimezoneTimeEl.textContent = getFormattedTime(tzid, {
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: true,
+    });
+  };
   
-  if (tzid) {
-    state.temporaryTimezone = tzid;
-  } else {
-    // Convert UTC offset to IANA-compatible format. Etc/GMT has an inverted sign.
-    const sign = zone <= 0 ? '+' : '-';
-    const offset = Math.abs(zone);
-    state.temporaryTimezone = `Etc/GMT${sign}${offset}`;
-  }
-
-  updateMapHighlights();
-  updateTimezoneDetails(dom.selectedTimezoneDetailsEl, feature);
-  document.dispatchEvent(new CustomEvent('temporarytimezonechanged'));
+  updateTime();
+  userTimeInterval = setInterval(updateTime, 1000);
 }
 
 // --- END HELPER FUNCTIONS ---
@@ -95,26 +97,42 @@ async function setupTimezoneMapListeners() {
   state.timezoneMap.data.addListener('mouseover', (event: google.maps.Data.MouseEvent) => {
     state.hoveredZone = event.feature.getProperty('zone') as number;
     updateMapHighlights();
-    updateTimezoneDetails(dom.hoverTimezoneDetailsEl, event.feature);
+    updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, event.feature, 'offset');
   });
   
   state.timezoneMap.data.addListener('mouseout', () => {
     state.hoveredZone = null;
     updateMapHighlights();
-    updateTimezoneDetails(dom.hoverTimezoneDetailsEl, null);
-    // This was the source of the mouseover bug. By checking if a zone is selected,
-    // we prevent the temporary timezone from being cleared unnecessarily.
-    if (state.selectedZone === null) {
-        state.temporaryTimezone = null;
-        document.dispatchEvent(new Event('temporarytimezonechanged'));
-    }
+    updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, null, 'offset');
   });
   
   state.timezoneMap.data.addListener('click', (event: google.maps.Data.MouseEvent) => {
-    selectTimezone(event.feature);
+    const feature = event.feature;
+    const tzid = feature.getProperty('tz_name1st') as string | null;
+    const zone = feature.getProperty('zone') as number;
+  
+    // If the clicked zone is already selected, deselect it.
+    if (state.selectedZone === zone) {
+      state.selectedZone = null;
+      state.temporaryTimezone = null;
+      updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, null, 'offset');
+    } else {
+      // Otherwise, select the new zone.
+      state.selectedZone = zone;
+      if (tzid) {
+        state.temporaryTimezone = tzid;
+      } else {
+        const sign = zone <= 0 ? '+' : '-';
+        const offset = Math.abs(zone);
+        state.temporaryTimezone = `Etc/GMT${sign}${offset}`;
+      }
+      updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, feature, 'offset');
+    }
+  
+    updateMapHighlights();
+    document.dispatchEvent(new CustomEvent('temporarytimezonechanged'));
   });
 }
-
 
 function updateMapHighlights() {
     state.timezoneMap!.data.setStyle(feature => {
@@ -124,21 +142,25 @@ function updateMapHighlights() {
         let strokeColor = 'rgba(255, 255, 255, 0.5)';
         let strokeWeight = 1;
 
+        if (state.gpsZone !== null && state.gpsZone === featureZone) {
+            fillColor = 'rgba(0, 0, 255, 0.3)';
+            strokeColor = 'blue';
+            strokeWeight = 2;
+            zIndex = 1;
+        }
+        
+        if (state.hoveredZone !== null && state.hoveredZone === featureZone) {
+            fillColor = 'rgba(255, 255, 255, 0.3)';
+            strokeColor = 'white';
+            strokeWeight = 2;
+            zIndex = 2;
+        }
+
         if (state.selectedZone !== null && state.selectedZone === featureZone) {
             fillColor = 'rgba(255, 255, 0, 0.3)';
             strokeColor = 'yellow';
             strokeWeight = 2;
             zIndex = 3;
-        } else if (state.hoveredZone !== null && state.hoveredZone === featureZone) {
-            fillColor = 'rgba(255, 255, 255, 0.3)';
-            strokeColor = 'white';
-            strokeWeight = 2;
-            zIndex = 2;
-        } else if (state.gpsZone !== null && state.gpsZone === featureZone) {
-            fillColor = 'rgba(0, 0, 255, 0.3)';
-            strokeColor = 'blue';
-            strokeWeight = 2;
-            zIndex = 1;
         }
 
         return ({
@@ -149,7 +171,6 @@ function updateMapHighlights() {
         });
     });
 }
-
 
 async function loadTimezoneGeoJson() {
   if (state.geoJsonLoaded) return;
@@ -206,7 +227,25 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   if (tzid && tzid !== state.localTimezone) {
     console.log(`Timezone updated to ${tzid}`);
     state.localTimezone = tzid;
-    state.gpsTzid = tzid; // also update gpsTzid for offset calculations
+    state.gpsTzid = tzid;
+    
+    updateUserTimezoneDetails(tzid);
+
+    let foundMatch = false;
+    state.timezoneMap?.data.forEach((feature) => {
+        if (foundMatch) return;
+        const featureTzid = feature.getProperty('tz_name1st');
+        if (featureTzid) {
+            const offsetString = getTimezoneOffset(featureTzid, tzid);
+            if (offsetString === 'Same time') {
+                state.gpsZone = feature.getProperty('zone') as number;
+                foundMatch = true;
+            }
+        }
+    });
+    
+    updateMapHighlights();
+
     document.dispatchEvent(new CustomEvent('gpstimezonefound', { detail: { tzid } }));
     startClocks();
   } else if (!state.localTimezone && tzid) {

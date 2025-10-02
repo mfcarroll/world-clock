@@ -1,22 +1,40 @@
 // src/dom.ts
 
+// Main container
+export const appContainer = document.getElementById('app-container')!;
+
+// Location Card
+export const locationLoader = document.getElementById('location-loader')!;
+export const locationContent = document.getElementById('location-content')!;
 export const latitudeEl = document.getElementById('latitude')!;
 export const longitudeEl = document.getElementById('longitude')!;
 export const locationErrorEl = document.getElementById('location-error')!;
+
+// Time Card
+export const timeLoader = document.getElementById('time-loader')!;
+export const timeContent = document.getElementById('time-content')!;
 export const localTimeEl = document.getElementById('local-time')!;
 export const localTimezoneEl = document.getElementById('local-timezone')!;
 export const localDateEl = document.getElementById('local-date')!;
 export const deviceTimeEl = document.getElementById('device-time')!;
 export const deviceTimezoneEl = document.getElementById('device-timezone')!;
-export const locationLoader = document.getElementById('location-loader')!;
-export const timeLoader = document.getElementById('time-loader')!;
-export const locationContent = document.getElementById('location-content')!;
-export const timeContent = document.getElementById('time-content')!;
+
+// World Clock
 export const timezoneInput = document.getElementById('timezone-input') as HTMLInputElement;
-export const addTimezoneBtn = document.getElementById('add-timezone-btn')!;
-export const worldClocksContainerEl = document.getElementById('world-clocks-container')!; // Corrected export name
 export const timezoneList = document.getElementById('timezone-list')!;
-export const timezoneMapTitle = document.getElementById('timezone-map-title')!;
+export const addTimezoneBtn = document.getElementById('add-timezone-btn')!;
+export const worldClocksContainerEl = document.getElementById('world-clocks-container')!;
+export const worldClockTemplate = document.getElementById('world-clock-template') as HTMLTemplateElement;
+
+// Timezone Map Details - UPDATED
+export const userTimezoneDetailsEl = document.getElementById('user-timezone-details')!;
+export const userTimezoneNameEl = document.getElementById('user-timezone-name')!;
+export const userTimezoneTimeEl = document.getElementById('user-timezone-time')!;
+
 export const selectedTimezoneDetailsEl = document.getElementById('selected-timezone-details')!;
-export const hoverTimezoneDetailsEl = document.getElementById('hover-timezone-details')!;
-export const worldClockTemplate = document.getElementById('world-clock-template') as HTMLTemplateElement; // Added missing export
+export const selectedTimezoneNameEl = document.getElementById('selected-timezone-name')!;
+export const selectedTimezoneOffsetEl = document.getElementById('selected-timezone-offset')!;
+
+export const hoveredTimezoneDetailsEl = document.getElementById('hovered-timezone-details')!;
+export const hoveredTimezoneNameEl = document.getElementById('hovered-timezone-name')!;
+export const hoveredTimezoneOffsetEl = document.getElementById('hovered-timezone-offset')!;

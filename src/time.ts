@@ -5,21 +5,39 @@ import { state } from './state';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
-export async function syncClock() {
-  console.log('Performing initial clock synchronization with worldtimeapi.org...');
+/**
+ * Returns a formatted time string for a given timezone.
+ * @param tz The IANA timezone name.
+ * @param options Intl.DateTimeFormatOptions for formatting.
+ * @returns The formatted time string.
+ */
+export function getFormattedTime(tz: string, options: Intl.DateTimeFormatOptions = {}): string {
+  const correctedTime = new Date(new Date().getTime() + state.timeOffset);
   try {
-    const response = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
+    return correctedTime.toLocaleTimeString('en-US', { timeZone: tz, ...options });
+  } catch (e) {
+    return "Invalid";
+  }
+}
+
+export async function syncClock() {
+  console.log('Performing initial clock synchronization with Google Cloud Function...');
+  try {
+    // --- IMPORTANT: Paste your new Cloud Function Trigger URL here! ---
+    const GCF_URL = 'https://get-utc-time-100547663673.us-west1.run.app/';
+    
+    const response = await fetch(GCF_URL);
     if (!response.ok) throw new Error('Network response was not ok.');
     
     const data = await response.json();
-    const serverUtcTime = new Date(data.utc_datetime).getTime();
+    const serverUtcTime = new Date(data.dateTime).getTime();
     const localDeviceTime = new Date().getTime();
     
     state.timeOffset = serverUtcTime - localDeviceTime;
     
     console.log(`Clock synchronized. Device offset is ${state.timeOffset}ms.`);
   } catch (error) {
-    console.error('Could not synchronize clock with remote server:', error);
+    console.error('Could not synchronize clock with Google Cloud Function:', error);
     state.timeOffset = 0;
   }
 }
@@ -45,16 +63,12 @@ export function updateAllClocks() {
   timezonesToRender.forEach((tz: string) => {
     const el = document.getElementById(`clock-${tz.replace(/\//g, '-')}`);
     if (el) {
-      try {
-        const timeString = correctedTime.toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit' });
+        const timeString = getFormattedTime(tz, { hour: '2-digit', minute: '2-digit' });
         const dateString = correctedTime.toLocaleDateString('en-US', { timeZone: tz, weekday: 'short' });
         const timeDiff = getTimezoneOffset(tz, localTimezone);
 
         el.querySelector('.time')!.textContent = timeString;
         el.querySelector('.date-diff')!.textContent = `${dateString}, ${timeDiff}`;
-      } catch (e) {
-        el.querySelector('.time')!.textContent = "Invalid";
-      }
     }
   });
   
@@ -85,7 +99,8 @@ export function getUtcOffset(timeZone: string): number {
 
 
 export function getTimezoneOffset(tz1: string, tz2: string | null): string {
-  if (!tz2 || tz1 === tz2) return 'Same as local';
+  if (!tz2) return '';
+  if (tz1 === tz2) return 'Same time';
   try {
     const offset1 = getUtcOffset(tz1);
     const offset2 = getUtcOffset(tz2);
@@ -106,7 +121,7 @@ export function startClocks() {
 }
 
 export async function fetchTimezoneForCoordinates(lat: number, lon: number): Promise<string | null> {
-  console.log(`Fetching timezone name from Google for Lat: ${lat}, Lon: ${lon}`);
+  console.log(`Fetching timezone from Google API for Lat: ${lat}, Lon: ${lon}`);
   try {
     const timestamp = Math.floor(Date.now() / 1000);
     const apiUrl = `https://maps.googleapis.com/maps/api/timezone/json?location=${lat},${lon}&timestamp=${timestamp}&key=${GOOGLE_MAPS_API_KEY}`;
