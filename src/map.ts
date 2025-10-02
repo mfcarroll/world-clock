@@ -154,7 +154,7 @@ function updateMapHighlights() {
 async function loadTimezoneGeoJson() {
   if (state.geoJsonLoaded) return;
   try {
-    const response = await fetch('/timezones.geojson');
+    const response = await fetch('timezones.geojson');
     state.geoJsonData = await response.json();
     state.geoJsonLoaded = true;
     console.log('Timezone GeoJSON has finished loading and is ready.');
