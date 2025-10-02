@@ -8,7 +8,6 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 export async function syncClock() {
   console.log('Performing initial clock synchronization with worldtimeapi.org...');
   try {
-    // This API provides the true current UTC time, which is required.
     const response = await fetch('https://worldtimeapi.org/api/timezone/Etc/UTC');
     if (!response.ok) throw new Error('Network response was not ok.');
     
@@ -16,13 +15,11 @@ export async function syncClock() {
     const serverUtcTime = new Date(data.utc_datetime).getTime();
     const localDeviceTime = new Date().getTime();
     
-    // This is the correct way to calculate the offset.
     state.timeOffset = serverUtcTime - localDeviceTime;
     
     console.log(`Clock synchronized. Device offset is ${state.timeOffset}ms.`);
   } catch (error) {
     console.error('Could not synchronize clock with remote server:', error);
-    // If the API fails, we fall back to assuming the device clock is correct.
     state.timeOffset = 0;
   }
 }
@@ -70,22 +67,31 @@ export function updateAllClocks() {
   dom.timeContent.classList.remove('hidden');
 }
 
+/**
+ * Calculates the numeric UTC offset for a given timezone.
+ * @param timeZone The IANA timezone name.
+ * @returns The UTC offset in hours.
+ */
+export function getUtcOffset(timeZone: string): number {
+    try {
+        const now = new Date();
+        const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const tzDate = new Date(now.toLocaleString('en-US', { timeZone }));
+        return (tzDate.getTime() - utcDate.getTime()) / 3600000; // Return offset in hours
+    } catch (e) {
+        return 99; // Return a large number for invalid timezones to sort them last
+    }
+}
+
+
 export function getTimezoneOffset(tz1: string, tz2: string | null): string {
   if (!tz2 || tz1 === tz2) return 'Same as local';
   try {
-    const now = new Date();
-    const getOffsetMilliseconds = (timeZone: string) => {
-      const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
-      const tzDate = new Date(now.toLocaleString('en-US', { timeZone }));
-      return tzDate.getTime() - utcDate.getTime();
-    };
-
-    const offset1 = getOffsetMilliseconds(tz1);
-    const offset2 = getOffsetMilliseconds(tz2);
-    const diffHours = (offset1 - offset2) / 3600000;
+    const offset1 = getUtcOffset(tz1);
+    const offset2 = getUtcOffset(tz2);
+    const diffHours = offset1 - offset2;
 
     if (diffHours === 0) return 'Same time';
-    // Use Number.isInteger to avoid unnecessary decimals
     const diff = Number.isInteger(diffHours) ? diffHours : diffHours.toFixed(1);
     return `${diffHours > 0 ? '+' : ''}${diff} hrs`;
   } catch (e) {
