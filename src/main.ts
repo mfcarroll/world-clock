@@ -4,7 +4,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 import * as dom from './dom';
 import { state } from './state';
 import { initMaps, onLocationError, onLocationSuccess } from './map';
-import { updateAllClocks } from './time';
+import { updateAllClocks, syncClock } from './time';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0"; 
 
@@ -22,7 +22,7 @@ function renderWorldClocks() {
     }
     timezonesToRender.sort();
 
-    timezonesToRender.forEach(tz => {
+    timezonesToRender.forEach((tz: string) => {
         const clone = template.content.cloneNode(true) as DocumentFragment;
         
         const clockDiv = clone.querySelector('.grid')!;
@@ -64,9 +64,8 @@ function handleAddTimezone() {
     const ianaTimezones = Intl.supportedValuesOf('timeZone');
     if (newTimezone && !state.addedTimezones.includes(newTimezone) && ianaTimezones.includes(newTimezone)) {
         addUniqueTimezoneToList(newTimezone);
-        const localTimezone = dom.localTimezoneEl.textContent?.replace(/ /g, '_');
-        if (localTimezone && localTimezone !== '--_/_--') {
-          updateAllClocks(localTimezone);
+        if (state.localTimezone) {
+          updateAllClocks();
         }
     } else if (newTimezone && !ianaTimezones.includes(newTimezone)) {
         alert('Invalid or unsupported timezone. Please select from the list.');
@@ -76,6 +75,8 @@ function handleAddTimezone() {
 
 
 async function startApp() {
+  await syncClock();
+
   const loader = new Loader({
     apiKey: GOOGLE_MAPS_API_KEY,
     version: "weekly",
@@ -92,7 +93,7 @@ async function startApp() {
   }
 
   const ianaTimezones = Intl.supportedValuesOf('timeZone');
-  dom.timezoneList.innerHTML = ianaTimezones.map(tz => `<option value="${tz}"></option>`).join('');
+  dom.timezoneList.innerHTML = ianaTimezones.map((tz: string) => `<option value="${tz}"></option>`).join('');
 
   dom.addTimezoneBtn.addEventListener('click', handleAddTimezone);
   dom.timezoneInput.addEventListener('keypress', (e) => {
@@ -106,7 +107,7 @@ async function startApp() {
 
     if (removeBtn) {
       const timezoneToRemove = (removeBtn as HTMLElement).dataset.timezone!;
-      state.addedTimezones = state.addedTimezones.filter(tz => tz !== timezoneToRemove);
+      state.addedTimezones = state.addedTimezones.filter((tz: string) => tz !== timezoneToRemove);
       saveTimezones();
       renderWorldClocks();
     } else if (pinBtn) {

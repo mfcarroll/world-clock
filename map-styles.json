@@ -1,0 +1,54 @@
+{
+  "variant": "dark",
+  "styles": [
+    {
+      "id": "natural.land",
+      "geometry": { "fillColor": "#242f3e" }
+    },
+    {
+      "id": "political",
+      "label": { "textFillColor": "#746855", "textStrokeColor": "#242f3e" }
+    },
+    {
+      "id": "infrastructure",
+      "label": { "textFillColor": "#746855", "textStrokeColor": "#242f3e" }
+    },
+    {
+      "id": "natural",
+      "label": { "textFillColor": "#746855", "textStrokeColor": "#242f3e" }
+    },
+    {
+      "id": "pointOfInterest",
+      "label": { "textFillColor": "#d59563", "textStrokeColor": "#242f3e" }
+    },
+    {
+      "id": "political.city",
+      "label": { "textFillColor": "#d59563" }
+    },
+    {
+      "id": "pointOfInterest.recreation.park",
+      "geometry": { "fillColor": "#263c3f" },
+      "label": { "textFillColor": "#6b9a76" }
+    },
+    {
+      "id": "infrastructure.roadNetwork.road",
+      "geometry": { "fillColor": "#38414e", "strokeColor": "#212a37" },
+      "label": { "textFillColor": "#9ca5b3" }
+    },
+    {
+      "id": "infrastructure.roadNetwork.road.highway",
+      "geometry": { "fillColor": "#746855", "strokeColor": "#1f2835" },
+      "label": { "textFillColor": "#f3d19c" }
+    },
+    {
+      "id": "infrastructure.transitStation",
+      "geometry": { "fillColor": "#2f3948" },
+      "label": { "textFillColor": "#d59563" }
+    },
+    {
+      "id": "natural.water",
+      "geometry": { "fillColor": "#17263c" },
+      "label": { "textFillColor": "#515c6d", "textStrokeColor": "#17263c" }
+    }
+  ]
+}
