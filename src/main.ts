@@ -8,6 +8,7 @@ import { initMaps, onLocationError, onLocationSuccess } from './map';
 import { updateAllClocks, getUtcOffset, syncClock } from './time';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
+// const GOOGLE_MAPS_API_KEY = "";
 
 function saveTimezones() {
     localStorage.setItem('worldClocks', JSON.stringify(state.addedTimezones));
@@ -96,7 +97,7 @@ async function startApp() {
   const loader = new Loader({
     apiKey: GOOGLE_MAPS_API_KEY,
     version: "weekly",
-    mapIds: ['c75a3fdf244efe75fccc5434'],
+    mapIds: ['c75a3fdf244efe75fccc5434','c75a3fdf244efe751e1f1767'],
   });
 
   try {

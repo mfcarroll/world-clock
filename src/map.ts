@@ -3,6 +3,7 @@
 import * as dom from './dom';
 import { state } from './state';
 import { fetchTimezoneForCoordinates, startClocks, getTimezoneOffset, getFormattedTime } from './time';
+import { darkModeStyles } from './map-styles';
 
 let userTimeInterval: number | null = null;
 
@@ -66,24 +67,28 @@ function updateUserTimezoneDetails(tzid: string) {
 
 export async function initMaps() {
   const { Map } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
-  const { AdvancedMarkerElement } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
+  // UPDATED: Import the classic Marker class
+  const { Marker } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
 
-  // Initialize Location Map
-  state.locationMap = new Map(document.getElementById('location-map') as HTMLElement, {
+  // Define your map options in a separate object
+  const mapOptions: google.maps.MapOptions = {
     center: { lat: 0, lng: 0 },
     zoom: 2,
-    mapId: 'c75a3fdf244efe75fccc5434',
-  });
-  state.locationMarker = new AdvancedMarkerElement({ map: state.locationMap, position: { lat: 0, lng: 0 } });
+    styles: darkModeStyles,
+    disableDefaultUI: true,
+    zoomControl: true,
+  };
+
+  // Initialize Location Map
+  state.locationMap = new Map(document.getElementById('location-map') as HTMLElement, mapOptions);
+  // UPDATED: Use the classic Marker
+  state.locationMarker = new Marker({ map: state.locationMap, position: { lat: 0, lng: 0 } });
 
 
   // Initialize Timezone Map
-  state.timezoneMap = new Map(document.getElementById('timezone-map') as HTMLElement, {
-    center: { lat: 0, lng: 0 },
-    zoom: 2,
-    mapId: 'c75a3fdf244efe75fccc5434',
-  });
-  state.timezoneMapMarker = new AdvancedMarkerElement({ map: state.timezoneMap, position: { lat: 0, lng: 0 } });
+  state.timezoneMap = new Map(document.getElementById('timezone-map') as HTMLElement, mapOptions);
+  // UPDATED: Use the classic Marker
+  state.timezoneMapMarker = new Marker({ map: state.timezoneMap, position: { lat: 0, lng: 0 } });
 
   setupTimezoneMapListeners();
 }
@@ -111,13 +116,11 @@ async function setupTimezoneMapListeners() {
     const tzid = feature.getProperty('tz_name1st') as string | null;
     const zone = feature.getProperty('zone') as number;
   
-    // If the clicked zone is already selected, deselect it.
     if (state.selectedZone === zone) {
       state.selectedZone = null;
       state.temporaryTimezone = null;
       updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, null, 'offset');
     } else {
-      // Otherwise, select the new zone.
       state.selectedZone = zone;
       if (tzid) {
         state.temporaryTimezone = tzid;
@@ -190,7 +193,8 @@ function updateLocationMap(lat: number, lon: number) {
     const pos = { lat, lng: lon };
     state.locationMap.setCenter(pos);
     state.locationMap.setZoom(12);
-    state.locationMarker.position = pos;
+    // UPDATED: Use setPosition() for classic markers
+    state.locationMarker.setPosition(pos);
   }
 }
 
@@ -198,7 +202,8 @@ function updateTimezoneMapMarker(lat: number, lon: number) {
   if (state.timezoneMap && state.timezoneMapMarker) {
     const pos = { lat, lng: lon };
     state.timezoneMap.setCenter(pos);
-    state.timezoneMapMarker.position = pos;
+    // UPDATED: Use setPosition() for classic markers
+    state.timezoneMapMarker.setPosition(pos);
   }
 }
 

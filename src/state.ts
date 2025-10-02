@@ -1,28 +1,40 @@
 // src/state.ts
 
-// The types for Map and AdvancedMarkerElement are available globally via the Google Maps script,
-// so we reference them using the 'google.maps' namespace.
-export const state = {
-  // Maps and Markers
-  locationMap: null as google.maps.Map | null,
-  timezoneMap: null as google.maps.Map | null,
-  locationMarker: null as google.maps.marker.AdvancedMarkerElement | null,
-  timezoneMapMarker: null as google.maps.marker.AdvancedMarkerElement | null,
+interface AppState {
+    locationMap: google.maps.Map | null;
+    timezoneMap: google.maps.Map | null;
+    locationMarker: google.maps.Marker | null;
+    timezoneMapMarker: google.maps.Marker | null;
+    geoJsonData: any | null;
+    geoJsonLoaded: boolean;
+    localTimezone: string | null;
+    gpsTzid: string | null;
+    gpsZone: number | null;
+    temporaryTimezone: string | null;
+    addedTimezones: string[];
+    hoveredZone: number | null;
+    selectedZone: number | null;
+    // ADDED: For storing the offset from true time
+    timeOffset: number;
+    // ADDED: For managing the clock update interval
+    clocksInterval: number | null;
+}
 
-  // Map Interaction State
-  selectedZone: null as number | null,
-  hoveredZone: null as number | null,
-  gpsZone: null as number | null, // The UTC offset of the user's detected timezone
-
-  // Time and Clocks
-  timeOffset: 0, // Difference between server time and local device time in ms
-  clocksInterval: null as number | null,
-  localTimezone: null as string | null, // The IANA timezone name of the user's current location
-  gpsTzid: null as string | null, // IANA timezone name specifically from the GPS lookup
-  
-  // Timezone Data
-  addedTimezones: JSON.parse(localStorage.getItem('worldClocks') || '["America/New_York", "Europe/Paris", "Asia/Tokyo", "Australia/Sydney"]'),
-  temporaryTimezone: null as string | null,
-  geoJsonData: null as any,
-  geoJsonLoaded: false,
+export const state: AppState = {
+    locationMap: null,
+    timezoneMap: null,
+    locationMarker: null,
+    timezoneMapMarker: null,
+    geoJsonData: null,
+    geoJsonLoaded: false,
+    localTimezone: null,
+    gpsTzid: null,
+    gpsZone: null,
+    temporaryTimezone: null,
+    addedTimezones: JSON.parse(localStorage.getItem('worldClocks') || '[]'),
+    hoveredZone: null,
+    selectedZone: null,
+    // ADDED: Initialize the new properties
+    timeOffset: 0,
+    clocksInterval: null,
 };
