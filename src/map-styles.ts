@@ -4,15 +4,15 @@
 export const darkModeStyles: google.maps.MapTypeStyle[] = [
   {
     elementType: 'geometry',
-    stylers: [{ color: '#2c3e50' }], // Dark slate for land
+    stylers: [{ color: '#3b4a5a' }], // UPDATED: Lighter, warmer slate for land
   },
   {
     elementType: 'labels.text.fill',
-    stylers: [{ color: '#8a99a8' }], // Light grey for text
+    stylers: [{ color: '#8a99a8' }], 
   },
   {
     elementType: 'labels.text.stroke',
-    stylers: [{ color: '#2c3e50' }],
+    stylers: [{ color: '#3b4a5a' }], // UPDATED: Match new land color
   },
   {
     featureType: 'administrative',
@@ -52,7 +52,7 @@ export const darkModeStyles: google.maps.MapTypeStyle[] = [
   {
     featureType: 'road',
     elementType: 'geometry',
-    stylers: [{ color: '#4a6078' }], // A slightly lighter color for roads
+    stylers: [{ color: '#4a6078' }], 
   },
   {
     featureType: 'road',
@@ -67,12 +67,12 @@ export const darkModeStyles: google.maps.MapTypeStyle[] = [
   {
     featureType: 'road.highway',
     elementType: 'geometry',
-    stylers: [{ color: '#5e7a96' }], // Highways stand out a bit more
+    stylers: [{ color: '#5e7a96' }], 
   },
   {
     featureType: 'road.highway',
     elementType: 'geometry.stroke',
-    stylers: [{ color: '#2c3e50' }],
+    stylers: [{ color: '#3b4a5a' }], // UPDATED: Match new land color
   },
   {
     featureType: 'road.highway',
@@ -92,7 +92,7 @@ export const darkModeStyles: google.maps.MapTypeStyle[] = [
   {
     featureType: 'water',
     elementType: 'geometry',
-    stylers: [{ color: '#1d2c3a' }], // Deep, dark blue for water
+    stylers: [{ color: '#1d2c3a' }], 
   },
   {
     featureType: 'water',

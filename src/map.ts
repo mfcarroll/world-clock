@@ -74,7 +74,6 @@ export async function initMaps() {
     zoom: 2,
     styles: darkModeStyles,
     disableDefaultUI: true,
-    // UPDATED: Set zoomControl to false
     zoomControl: false,
   };
 
@@ -228,18 +227,24 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
     
     updateUserTimezoneDetails(tzid);
 
-    let foundMatch = false;
-    state.timezoneMap?.data.forEach((feature) => {
-        if (foundMatch) return;
-        const featureTzid = feature.getProperty('tz_name1st') as string | null;
-        if (featureTzid && typeof featureTzid === 'string') {
-            const offsetString = getTimezoneOffset(featureTzid, tzid);
-            if (offsetString === 'Same time') {
-                state.gpsZone = feature.getProperty('zone') as number;
-                foundMatch = true;
+    if (state.timezoneMap?.data) {
+        let foundMatch = false;
+        // UPDATED: Convert map data to an array first, then loop over the array
+        const features: google.maps.Data.Feature[] = [];
+        state.timezoneMap.data.forEach(feature => features.push(feature));
+
+        for (const feature of features) {
+            if (foundMatch) break;
+            const featureTzid = feature.getProperty('tz_name1st') as string | null;
+            if (featureTzid && typeof featureTzid === 'string') {
+                const offsetString = getTimezoneOffset(featureTzid, tzid);
+                if (offsetString === 'Same time') {
+                    state.gpsZone = feature.getProperty('zone') as number;
+                    foundMatch = true;
+                }
             }
         }
-    });
+    }
     
     updateMapHighlights();
 
@@ -249,5 +254,35 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
     state.localTimezone = tzid;
     state.gpsTzid = tzid;
     startClocks();
+  }
+
+  const initialTimezonesStr = sessionStorage.getItem('initialTimezones');
+  if (initialTimezonesStr && tzid && state.timezoneMap?.data) {
+      const initialTimezones = JSON.parse(initialTimezonesStr);
+      const targetTz = initialTimezones.find((tz: string) => tz !== tzid);
+
+      if (targetTz) {
+          let targetFeature: google.maps.Data.Feature | null = null;
+          // UPDATED: Convert map data to an array first, then loop over the array
+          const features: google.maps.Data.Feature[] = [];
+          state.timezoneMap.data.forEach(feature => features.push(feature));
+
+          for (const feature of features) {
+              if (feature.getProperty('tz_name1st') === targetTz) {
+                  targetFeature = feature;
+                  break;
+              }
+          }
+
+          if (targetFeature) {
+              const zone = targetFeature.getProperty('zone') as number;
+              state.selectedZone = zone;
+              state.temporaryTimezone = targetTz;
+              updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, targetFeature, 'offset');
+              updateMapHighlights();
+              document.dispatchEvent(new CustomEvent('temporarytimezonechanged'));
+          }
+      }
+      sessionStorage.removeItem('initialTimezones');
   }
 }

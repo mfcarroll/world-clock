@@ -8,7 +8,30 @@ import { initMaps, onLocationError, onLocationSuccess } from './map';
 import { updateAllClocks, getUtcOffset, syncClock } from './time';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
-// const GOOGLE_MAPS_API_KEY = "";
+
+/**
+ * Checks for a 'timezones' URL parameter and processes it.
+ * If found, it saves the timezones to local and session storage, then cleans the URL.
+ */
+function handleUrlParameters() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('timezones')) {
+        const timezonesParam = urlParams.get('timezones');
+        if (timezonesParam) {
+            const timezones = timezonesParam.split(',').filter(tz => tz.trim() !== '');
+            
+            // Save to localStorage for persistence
+            localStorage.setItem('worldClocks', JSON.stringify(timezones));
+            state.addedTimezones = timezones;
+            
+            // Save to sessionStorage to signal a one-time action for initial selection
+            sessionStorage.setItem('initialTimezones', JSON.stringify(timezones));
+        }
+
+        // Remove the parameters from the URL without reloading the page
+        history.replaceState(null, '', window.location.pathname);
+    }
+}
 
 function saveTimezones() {
     localStorage.setItem('worldClocks', JSON.stringify(state.addedTimezones));
@@ -92,12 +115,13 @@ function handleAddTimezone() {
 }
 
 async function startApp() {
+  handleUrlParameters();
+
   await syncClock();
   
   const loader = new Loader({
     apiKey: GOOGLE_MAPS_API_KEY,
     version: "weekly",
-    mapIds: ['c75a3fdf244efe75fccc5434','c75a3fdf244efe751e1f1767'],
   });
 
   try {
