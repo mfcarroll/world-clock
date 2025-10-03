@@ -201,6 +201,10 @@ async function setupTimezoneMapListeners() {
   });
   
   state.timezoneMap.data.addListener('click', (event: google.maps.Data.MouseEvent) => {
+    if (event.latLng) {
+      console.log(`Map clicked at: Lat: ${event.latLng.lat()}, Lng: ${event.latLng.lng()}`);
+    }
+
     updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, null, 'offset');
     selectFeature(event.feature);
   });
@@ -292,10 +296,17 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   const { latitude, longitude } = pos.coords;
   console.log(`Location changed, fetching new timezone name...`);
 
-  dom.latitudeEl.textContent = `${latitude.toFixed(4)}°`;
-  dom.longitudeEl.textContent = `${longitude.toFixed(4)}°`;
+  const formatCoordinate = (value: number, padding: number): string => {
+    const [integer, fractional] = value.toFixed(4).split('.');
+    return `${integer.padStart(padding, '\u00A0')}.${fractional}°`;
+  };
+
+  dom.latitudeEl.textContent = formatCoordinate(latitude, 4);
+  dom.longitudeEl.textContent = formatCoordinate(longitude, 4);
+  
   dom.locationLoader.classList.add('hidden');
   dom.locationContent.classList.remove('hidden');
+  dom.locationContent.classList.add('grid'); // Add grid class dynamically
 
   updateLocationMap(latitude, longitude);
   updateTimezoneMapMarker(latitude, longitude);
