@@ -2,8 +2,41 @@
 
 import * as dom from './dom';
 import { state } from './state';
+import { point as turfPoint, booleanPointInPolygon } from '@turf/turf';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
+
+/**
+ * [FALLBACK FUNCTION]
+ * Finds a timezone for a given coordinate by checking against the local GeoJSON data.
+ * @param lat The latitude.
+ * @param lon The longitude.
+ * @returns The IANA timezone name if a match is found, otherwise null.
+ */
+function findTimezoneFromGeoJSON(lat: number, lon: number): string | null {
+    if (!state.geoJsonData) {
+        console.error("GeoJSON data not loaded, cannot perform fallback search.");
+        return null;
+    }
+
+    const searchPoint = turfPoint([lon, lat]);
+
+    for (const feature of state.geoJsonData.features) {
+        // booleanPointInPolygon handles both Polygon and MultiPolygon geometries
+        if (booleanPointInPolygon(searchPoint, feature.geometry)) {
+            const tzid = feature.properties.tz_name1st;
+            const zone = feature.properties.zone;
+            console.log(`Fallback successful: Found timezone "${tzid}" in local GeoJSON.`);
+            return getValidTimezoneName(tzid, zone);
+        }
+    }
+
+    console.log("Fallback failed: No matching timezone found in local GeoJSON for the given coordinates.");
+    return null;
+}
+
+
+// --- (The rest of the file remains the same until fetchTimezoneForCoordinates) ---
 
 /**
  * Parses the hour offset from a custom "Etc/GMT" timezone string.
@@ -47,7 +80,6 @@ export function getFormattedTime(tz: string, options: Intl.DateTimeFormatOptions
 export async function syncClock() {
   console.log('Performing initial clock synchronization with Google Cloud Function...');
   try {
-    // --- IMPORTANT: Paste your new Cloud Function Trigger URL here! ---
     const GCF_URL = 'https://get-utc-time-100547663673.us-west1.run.app/';
     
     const response = await fetch(GCF_URL);
@@ -89,7 +121,6 @@ export function updateAllClocks() {
     if (el) {
         const timeString = getFormattedTime(tz, { hour: '2-digit', minute: '2-digit' });
         
-        // Also apply the GMT offset logic for the date string to prevent crashes.
         let dateString;
         const offset = getGmtOffset(tz);
         if (offset !== null) {
@@ -115,11 +146,6 @@ export function updateAllClocks() {
   dom.timeContent.classList.remove('hidden');
 }
 
-/**
- * Calculates the numeric UTC offset for a given timezone.
- * @param timeZone The IANA timezone name.
- * @returns The UTC offset in hours.
- */
 export function getUtcOffset(timeZone: string): number {
     const offset = getGmtOffset(timeZone);
     if (offset !== null) {
@@ -130,24 +156,21 @@ export function getUtcOffset(timeZone: string): number {
         const now = new Date();
         const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
         const tzDate = new Date(now.toLocaleString('en-US', { timeZone }));
-        return (tzDate.getTime() - utcDate.getTime()) / 3600000; // Return offset in hours
+        return (tzDate.getTime() - utcDate.getTime()) / 3600000;
     } catch (e) {
-        return 99; // Return a large number for invalid timezones to sort them last
+        return 99;
     }
 }
 
-// ADDED: A helper to get a valid timezone name for offset calculation
 export function getValidTimezoneName(tzid: string | null, zone: number): string {
     if (tzid && tzid.trim() !== '') {
         try {
-            // Test if the tzid is valid
             new Intl.DateTimeFormat('en-US', { timeZone: tzid });
             return tzid;
         } catch (e) {
-            // Fallback if tzid is invalid
+            // Fallback for invalid tzid
         }
     }
-    // Fallback for null, empty, or invalid tzid. Note: Etc/GMT signs are inverted.
     const sign = zone <= 0 ? '+' : '-';
     return `Etc/GMT${sign}${Math.abs(zone)}`;
 }
@@ -187,11 +210,14 @@ export async function fetchTimezoneForCoordinates(lat: number, lon: number): Pro
     const data = await response.json();
     if (data.status === 'OK' && data.timeZoneId) {
       return data.timeZoneId;
+    } else if (data.status === 'ZERO_RESULTS') {
+        console.log("Google API returned ZERO_RESULTS. Initiating fallback to local GeoJSON.");
+        return findTimezoneFromGeoJSON(lat, lon);
     } else {
       throw new Error(data.errorMessage || 'Failed to fetch timezone from Google.');
     }
   } catch (error) {
-    console.error('Error fetching timezone:', error);
-    return null;
+    console.error('Error fetching timezone from Google API, initiating fallback:', error);
+    return findTimezoneFromGeoJSON(lat, lon);
   }
 }
