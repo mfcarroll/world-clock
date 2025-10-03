@@ -22,7 +22,6 @@ function findTimezoneFromGeoJSON(lat: number, lon: number): string | null {
     const searchPoint = turfPoint([lon, lat]);
 
     for (const feature of state.geoJsonData.features) {
-        // booleanPointInPolygon handles both Polygon and MultiPolygon geometries
         if (booleanPointInPolygon(searchPoint, feature.geometry)) {
             const tzid = feature.properties.tz_name1st;
             const zone = feature.properties.zone;
@@ -36,15 +35,12 @@ function findTimezoneFromGeoJSON(lat: number, lon: number): string | null {
 }
 
 
-// --- (The rest of the file remains the same until fetchTimezoneForCoordinates) ---
-
 /**
  * Parses the hour offset from a custom "Etc/GMT" timezone string.
  * @param timeZone The timezone string to parse.
  * @returns The offset in hours, or null if it's not a custom GMT string.
  */
 function getGmtOffset(timeZone: string): number | null {
-    // The sign is inverted in the "Etc/GMT" standard (e.g., "Etc/GMT-5.5" means UTC+5.5).
     const gmtMatch = timeZone.match(/^Etc\/GMT([+-])(\d+(?:\.\d+)?)$/);
     if (gmtMatch) {
         const sign = gmtMatch[1] === '+' ? -1 : 1;
@@ -65,7 +61,6 @@ export function getFormattedTime(tz: string, options: Intl.DateTimeFormatOptions
   const offset = getGmtOffset(tz);
 
   if (offset !== null) {
-    // Handle custom GMT timezones manually by applying the offset and formatting in UTC.
     const targetTime = new Date(correctedTime.getTime() + offset * 3600000);
     return targetTime.toLocaleTimeString('en-US', { timeZone: 'UTC', ...options });
   }
@@ -103,7 +98,12 @@ export function updateAllClocks() {
   const localTimezone = state.localTimezone;
   if (localTimezone) {
     try {
-      dom.localTimeEl.textContent = correctedTime.toLocaleTimeString('en-US', { timeZone: localTimezone });
+      dom.localTimeEl.textContent = correctedTime.toLocaleTimeString('en-US', { 
+        timeZone: localTimezone,
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit'
+      });
       dom.localDateEl.textContent = correctedTime.toLocaleDateString('en-US', { timeZone: localTimezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       dom.localTimezoneEl.textContent = localTimezone.replace(/_/g, ' ');
     } catch (e) {
@@ -119,7 +119,7 @@ export function updateAllClocks() {
   timezonesToRender.forEach((tz: string) => {
     const el = document.getElementById(`clock-${tz.replace(/\//g, '-')}`);
     if (el) {
-        const timeString = getFormattedTime(tz, { hour: '2-digit', minute: '2-digit' });
+        const timeString = getFormattedTime(tz, { hour: 'numeric', minute: '2-digit' });
         
         let dateString;
         const offset = getGmtOffset(tz);
@@ -139,7 +139,11 @@ export function updateAllClocks() {
   
   const deviceNow = new Date();
   const deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  dom.deviceTimeEl.textContent = deviceNow.toLocaleTimeString('en-US');
+  dom.deviceTimeEl.textContent = deviceNow.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit'
+  });
   dom.deviceTimezoneEl.textContent = deviceTz.replace(/_/g, ' ');
 
   dom.timeLoader.classList.add('hidden');
@@ -178,13 +182,13 @@ export function getValidTimezoneName(tzid: string | null, zone: number): string 
 
 export function getTimezoneOffset(tz1: string, tz2: string | null): string {
   if (!tz2) return '';
-  if (tz1 === tz2) return 'Same time';
+  if (tz1 === tz2) return 'Local time';
   try {
     const offset1 = getUtcOffset(tz1);
     const offset2 = getUtcOffset(tz2);
     const diffHours = offset1 - offset2;
 
-    if (diffHours === 0) return 'Same time';
+    if (diffHours === 0) return 'Local time';
     const diff = Number.isInteger(diffHours) ? diffHours : diffHours.toFixed(1);
     return `${diffHours > 0 ? '+' : ''}${diff} hrs`;
   } catch (e) {
