@@ -56,7 +56,7 @@
             <div class="p-4 relative">
                 <h2 id="timezone-map-title" class="text-xl font-semibold text-white">World Timezone Map</h2>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 min-h-[4rem]">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2 min-h-[4rem]">
                   <div id="user-timezone-details" class="timezone-detail-card border-blue-500 hidden">
                       <p id="user-timezone-name" class="font-bold truncate text-lg"></p>
                       <p id="user-timezone-time" class="text-xl font-mono"></p>
@@ -91,16 +91,16 @@
     </div>
     
     <template id="world-clock-template">
-      <div class="grid grid-cols-3 items-center gap-4 bg-gray-700/50 p-3 rounded-lg border-2 border-transparent">
-        <div>
+      <div class="relative grid grid-cols-5 lg:grid-cols-3 items-center gap-4 bg-gray-700/50 p-3 pr-10 rounded-lg border-2 border-transparent">
+        <div class="col-span-2 lg:col-span-1">
           <p class="city text-lg font-medium text-white truncate"></p>
           <p class="region text-sm text-gray-400"></p>
         </div>
-        <div class="text-center">
+        <div class="col-span-3 lg:col-span-1 text-left lg:text-center">
           <p class="time text-2xl font-semibold text-white font-mono">--:--</p>
           <p class="date-diff text-sm text-gray-400">--, +/- hrs</p>
         </div>
-        <div class="flex justify-end">
+        <div class="absolute top-1/2 -translate-y-1/2 right-2 flex space-x-1">
           <button class="remove-btn text-gray-500 hover:text-red-400 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
           </button>
