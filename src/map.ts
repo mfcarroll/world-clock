@@ -6,6 +6,7 @@ import { fetchTimezoneForCoordinates, startClocks, getTimezoneOffset, getFormatt
 import { darkModeStyles } from './map-styles';
 
 let userTimeInterval: number | null = null;
+const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 // --- HELPER FUNCTIONS ---
 
@@ -93,13 +94,14 @@ async function setupTimezoneMapListeners() {
   state.timezoneMap.data.addGeoJson(state.geoJsonData);
   
   state.timezoneMap.data.addListener('mouseover', (event: google.maps.Data.MouseEvent) => {
-    // UPDATED: Use current_offset instead of zone
+    if (isTouchDevice) return; // Ignore hover on touch devices
     state.hoveredZone = event.feature.getProperty('current_offset') as number;
     updateMapHighlights();
     updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, event.feature, 'offset');
   });
   
   state.timezoneMap.data.addListener('mouseout', () => {
+    if (isTouchDevice) return; // Ignore hover on touch devices
     state.hoveredZone = null;
     updateMapHighlights();
     updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, null, 'offset');
@@ -108,7 +110,6 @@ async function setupTimezoneMapListeners() {
   state.timezoneMap.data.addListener('click', (event: google.maps.Data.MouseEvent) => {
     const feature = event.feature;
     const tzid = feature.getProperty('tz_name1st') as string | null;
-    // UPDATED: Use current_offset instead of zone
     const currentOffset = feature.getProperty('current_offset') as number;
     const zone = feature.getProperty('zone') as number;
   
@@ -117,12 +118,16 @@ async function setupTimezoneMapListeners() {
       state.temporaryTimezone = null;
       updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, null, 'offset');
     } else {
-      // UPDATED: Use current_offset instead of zone
       state.selectedZone = currentOffset;
       state.temporaryTimezone = getValidTimezoneName(tzid, zone);
       updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, feature, 'offset');
     }
   
+    // On touch devices, ensure hover is cleared
+    if (isTouchDevice) {
+        state.hoveredZone = null;
+    }
+
     updateMapHighlights();
     document.dispatchEvent(new CustomEvent('temporarytimezonechanged'));
   });
@@ -183,14 +188,12 @@ async function loadTimezoneGeoJson() {
     const response = await fetch('timezones.geojson');
     const geoJson = await response.json();
 
-    // --- ADDED: Augment the GeoJSON data with the current offset ---
     geoJson.features.forEach((feature: any) => {
         const tzid = feature.properties.tz_name1st;
         const zone = feature.properties.zone;
         const validTimezone = getValidTimezoneName(tzid, zone);
         feature.properties.current_offset = getUtcOffset(validTimezone);
     });
-    // --- END ADDED SECTION ---
 
     state.geoJsonData = geoJson;
     state.geoJsonLoaded = true;
@@ -247,7 +250,6 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
     
     updateUserTimezoneDetails(tzid);
 
-    // UPDATED: Use getUtcOffset to find the gpsZone
     state.gpsZone = getUtcOffset(tzid);
     
     updateMapHighlights();
