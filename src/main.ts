@@ -66,9 +66,27 @@ function renderWorldClocks() {
         
         clockDiv.id = `clock-${tz.replace(/\//g, '-')}`;
         
+        // Start with a clean slate for borders
+        clockDiv.classList.remove('border-transparent', 'border-blue-500', 'border-yellow-500');
+
+        // Style for GPS-detected timezone
         if (tz === state.gpsTzid) {
-            clockDiv.classList.remove('border-transparent');
             clockDiv.classList.add('border-blue-500');
+        } 
+        // Style for the timezone currently selected on the map
+        else if (tz === state.temporaryTimezone) {
+            clockDiv.classList.add('border-yellow-500');
+        } 
+        // Default for all other clocks
+        else {
+            clockDiv.classList.add('border-transparent');
+        }
+
+        // Add a special background if the selected timezone hasn't been "pinned" yet
+        if (tz === state.temporaryTimezone && !state.addedTimezones.includes(tz)) {
+            clockDiv.classList.add('bg-yellow-800', 'bg-opacity-50');
+        } else {
+            clockDiv.classList.remove('bg-yellow-800', 'bg-opacity-50');
         }
 
         let city = tz.split('/').pop()?.replace(/_/g, ' ') || 'Unknown';
@@ -87,8 +105,8 @@ function renderWorldClocks() {
         removeBtn.dataset.timezone = tz;
         pinBtn.dataset.timezone = tz;
 
-        if (tz === state.temporaryTimezone) {
-            clockDiv.classList.add('bg-yellow-800', 'bg-opacity-50', 'border', 'border-yellow-500');
+        // Show 'pin' button for temporary timezones, 'remove' for others
+        if (tz === state.temporaryTimezone && !state.addedTimezones.includes(tz)) {
             removeBtn.classList.add('hidden');
             pinBtn.classList.remove('hidden');
         } else {
@@ -139,6 +157,13 @@ async function startApp() {
   dom.timezoneInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleAddTimezone();
   });
+  
+  dom.timezoneInput.addEventListener('input', () => {
+    const ianaTimezones = Intl.supportedValuesOf('timeZone');
+    if (ianaTimezones.includes(dom.timezoneInput.value)) {
+        handleAddTimezone();
+    }
+  });
 
   dom.worldClocksContainerEl.addEventListener('click', (e: MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -147,17 +172,13 @@ async function startApp() {
 
     if (removeBtn) {
       const timezoneToRemove = (removeBtn as HTMLElement).dataset.timezone!;
-      if (timezoneToRemove === state.temporaryTimezone) {
-          state.temporaryTimezone = null;
-      } else {
-          state.addedTimezones = state.addedTimezones.filter((tz: string) => tz !== timezoneToRemove);
-          saveTimezones();
-      }
+      state.addedTimezones = state.addedTimezones.filter((tz: string) => tz !== timezoneToRemove);
+      saveTimezones();
       renderWorldClocks();
+      updateAllClocks();
     } else if (pinBtn) {
       const timezoneToPin = (pinBtn as HTMLElement).dataset.timezone!;
       addUniqueTimezoneToList(timezoneToPin);
-      state.temporaryTimezone = null;
       renderWorldClocks();
       updateAllClocks();
     }
