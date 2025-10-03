@@ -4,7 +4,6 @@ import * as dom from './dom';
 import { state } from './state';
 import { fetchTimezoneForCoordinates, startClocks, getTimezoneOffset, getFormattedTime, getUtcOffset, getValidTimezoneName, getDisplayTimezoneName } from './time';
 import { darkModeStyles } from './map-styles';
-import { point as turfPoint, booleanPointInPolygon } from '@turf/turf';
 
 let userTimeInterval: number | null = null;
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;

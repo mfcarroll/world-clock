@@ -4,18 +4,23 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview --host"
   },
   "devDependencies": {
     "@googlemaps/js-api-loader": "^1.16.10",
-    "@turf/turf": "^6.5.0",
     "@types/google.maps": "^3.55.10",
+    "@vitejs/plugin-basic-ssl": "^1.0.2",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.2.2",
-    "vite": "^5.2.0"
+    "vite": "^5.2.0",
+    "vite-plugin-pwa": "^1.0.3"
+  },
+  "dependencies": {
+    "@turf/boolean-point-in-polygon": "^7.2.0",
+    "@turf/helpers": "^7.2.0"
   }
 }

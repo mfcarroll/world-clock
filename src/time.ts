@@ -2,7 +2,8 @@
 
 import * as dom from './dom';
 import { state } from './state';
-import { point as turfPoint, booleanPointInPolygon } from '@turf/turf';
+import { point as turfPoint } from '@turf/helpers';
+import { booleanPointInPolygon } from '@turf/boolean-point-in-polygon';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
