@@ -4,7 +4,7 @@ import './style.css';
 import { Loader } from '@googlemaps/js-api-loader';
 import * as dom from './dom';
 import { state } from './state';
-import { initMaps, onLocationError, onLocationSuccess } from './map';
+import { initMaps, onLocationError, onLocationSuccess, selectTimezone } from './map';
 import { updateAllClocks, getUtcOffset, syncClock } from './time';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
@@ -182,6 +182,12 @@ async function startApp() {
       addUniqueTimezoneToList(timezoneToPin);
       renderWorldClocks();
       updateAllClocks();
+    } else {
+        const clockDiv = target.closest('.grid');
+        if (clockDiv) {
+            const timezone = (clockDiv as HTMLElement).id.replace('clock-', '').replace(/-/g, '/');
+            selectTimezone(timezone);
+        }
     }
   });
 

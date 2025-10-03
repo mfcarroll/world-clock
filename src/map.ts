@@ -63,6 +63,45 @@ function updateUserTimezoneDetails(tzid: string) {
   userTimeInterval = setInterval(updateTime, 1000);
 }
 
+function selectFeature(feature: google.maps.Data.Feature) {
+    const tzid = feature.getProperty('tz_name1st') as string | null;
+    const currentOffset = feature.getProperty('current_offset') as number;
+    const zone = feature.getProperty('zone') as number;
+  
+    if (state.selectedZone === currentOffset) {
+      state.selectedZone = null;
+      state.temporaryTimezone = null;
+      updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, null, 'offset');
+    } else {
+      state.selectedZone = currentOffset;
+      state.temporaryTimezone = getValidTimezoneName(tzid, zone);
+      updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, feature, 'offset');
+    }
+  
+    // On touch devices, ensure hover is cleared
+    if (isTouchDevice) {
+        state.hoveredZone = null;
+    }
+
+    updateMapHighlights();
+    document.dispatchEvent(new CustomEvent('temporarytimezonechanged'));
+}
+
+export function selectTimezone(tzid: string) {
+    if (!state.geoJsonLoaded || !state.timezoneMap) return;
+
+    const offset = getUtcOffset(tzid);
+    let found = false;
+
+    state.timezoneMap.data.forEach((feature: google.maps.Data.Feature) => {
+        if (!found && feature.getProperty('current_offset') === offset) {
+            selectFeature(feature);
+            found = true;
+        }
+    });
+}
+
+
 // --- END HELPER FUNCTIONS ---
 
 
@@ -108,28 +147,7 @@ async function setupTimezoneMapListeners() {
   });
   
   state.timezoneMap.data.addListener('click', (event: google.maps.Data.MouseEvent) => {
-    const feature = event.feature;
-    const tzid = feature.getProperty('tz_name1st') as string | null;
-    const currentOffset = feature.getProperty('current_offset') as number;
-    const zone = feature.getProperty('zone') as number;
-  
-    if (state.selectedZone === currentOffset) {
-      state.selectedZone = null;
-      state.temporaryTimezone = null;
-      updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, null, 'offset');
-    } else {
-      state.selectedZone = currentOffset;
-      state.temporaryTimezone = getValidTimezoneName(tzid, zone);
-      updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, feature, 'offset');
-    }
-  
-    // On touch devices, ensure hover is cleared
-    if (isTouchDevice) {
-        state.hoveredZone = null;
-    }
-
-    updateMapHighlights();
-    document.dispatchEvent(new CustomEvent('temporarytimezonechanged'));
+    selectFeature(event.feature);
   });
 }
 
