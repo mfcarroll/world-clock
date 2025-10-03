@@ -14,10 +14,9 @@ interface AppState {
     addedTimezones: string[];
     hoveredZone: number | null;
     selectedZone: number | null;
-    // ADDED: For storing the offset from true time
     timeOffset: number;
-    // ADDED: For managing the clock update interval
     clocksInterval: number | null;
+    timezonesFromUrl: string[] | null;
 }
 
 export const state: AppState = {
@@ -34,7 +33,7 @@ export const state: AppState = {
     addedTimezones: JSON.parse(localStorage.getItem('worldClocks') || '[]'),
     hoveredZone: null,
     selectedZone: null,
-    // ADDED: Initialize the new properties
     timeOffset: 0,
     clocksInterval: null,
+    timezonesFromUrl: null,
 };

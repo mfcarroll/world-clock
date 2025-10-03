@@ -11,7 +11,7 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
 /**
  * Checks for a 'timezones' URL parameter and processes it.
- * If found, it saves the timezones to local and session storage, then cleans the URL.
+ * If found, it saves the timezones to local storage and the app state, then cleans the URL.
  */
 function handleUrlParameters() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -24,8 +24,8 @@ function handleUrlParameters() {
             localStorage.setItem('worldClocks', JSON.stringify(timezones));
             state.addedTimezones = timezones;
             
-            // Save to sessionStorage to signal a one-time action for initial selection
-            sessionStorage.setItem('initialTimezones', JSON.stringify(timezones));
+            // Save to state for initial selection after GPS lock
+            state.timezonesFromUrl = timezones;
         }
 
         // Remove the parameters from the URL without reloading the page
@@ -193,6 +193,17 @@ async function startApp() {
     const { tzid } = (e as CustomEvent).detail;
     dom.localTimezoneEl.textContent = tzid.replace(/_/g, ' ');
     addUniqueTimezoneToList(tzid);
+
+    if (state.timezonesFromUrl) {
+      const timezoneToSelect = state.timezonesFromUrl.find(tz => tz !== tzid);
+      if (timezoneToSelect) {
+          state.temporaryTimezone = timezoneToSelect;
+          state.selectedZone = getUtcOffset(timezoneToSelect);
+          document.dispatchEvent(new CustomEvent('temporarytimezonechanged'));
+      }
+      state.timezonesFromUrl = null; // Clear after processing
+    }
+
     renderWorldClocks();
   });
 
