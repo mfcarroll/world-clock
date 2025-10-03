@@ -118,7 +118,7 @@ function updateUserTimezoneDetails(tzid: string) {
   dom.userTimezoneNameEl.textContent = city;
   dom.userTimezoneDetailsEl.classList.remove('hidden');
 
-  if (userTimeInterval) clearInterval(userTimeInterval);
+  if (userTimeInterval) window.clearInterval(userTimeInterval);
 
   const updateTime = () => {
     dom.userTimezoneTimeEl.textContent = getFormattedTime(tzid, {
@@ -129,7 +129,7 @@ function updateUserTimezoneDetails(tzid: string) {
   };
   
   updateTime();
-  userTimeInterval = setInterval(updateTime, 1000);
+  userTimeInterval = window.setInterval(updateTime, 1000);
 }
 
 function selectFeature(feature: google.maps.Data.Feature | null, tzidToSelect?: string) {

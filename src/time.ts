@@ -225,9 +225,9 @@ export function getTimezoneOffset(tz1: string, tz2: string | null): string {
 }
 
 export function startClocks() {
-  if (state.clocksInterval) clearInterval(state.clocksInterval);
+  if (state.clocksInterval) window.clearInterval(state.clocksInterval);
   updateAllClocks();
-  state.clocksInterval = setInterval(updateAllClocks, 1000);
+  state.clocksInterval = window.setInterval(updateAllClocks, 1000);
 }
 
 export async function fetchTimezoneForCoordinates(lat: number, lon: number): Promise<string | null> {
