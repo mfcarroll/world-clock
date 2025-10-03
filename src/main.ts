@@ -45,7 +45,13 @@ function addUniqueTimezoneToList(tz: string) {
 
     const newOffset = getUtcOffset(tz);
 
-    // Remove any existing timezones from the list that have the same UTC offset.
+    // Prioritize user's GPS timezone: if the new timezone has the same offset as the
+    // GPS zone but a different name, do not add it.
+    if (state.gpsTzid && getUtcOffset(state.gpsTzid) === newOffset && tz !== state.gpsTzid) {
+        return;
+    }
+
+    // Remove any other existing timezones from the list that have the same UTC offset.
     state.addedTimezones = state.addedTimezones.filter(existingTz => getUtcOffset(existingTz) !== newOffset);
 
     // Add the new timezone.
@@ -88,9 +94,8 @@ function createClockElement(tz: string): HTMLElement {
 
     let city = tz.split('/').pop()?.replace(/_/g, ' ') || 'Unknown';
     if (tz.startsWith('Etc/GMT')) {
-        const offsetMatch = tz.match(/[+-](\d+(?:\.\d+)?)/); // Updated regex to capture decimals
+        const offsetMatch = tz.match(/[+-](\d+(?:\.\d+)?)/);
         if (offsetMatch) {
-            // FIX: Use parseFloat instead of parseInt to handle fractional offsets.
             const offset = -parseFloat(offsetMatch[0]);
             city = `UTC${offset >= 0 ? '+' : ''}${offset}`;
         }

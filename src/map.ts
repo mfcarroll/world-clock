@@ -67,9 +67,15 @@ function selectFeature(feature: google.maps.Data.Feature) {
     const tzid = feature.getProperty('tz_name1st') as string | null;
     const currentOffset = feature.getProperty('current_offset') as number;
     const zone = feature.getProperty('zone') as number;
-    const newTzid = getValidTimezoneName(tzid, zone);
+    let newTzid = getValidTimezoneName(tzid, zone);
   
-    if (state.selectedZone === currentOffset) {
+    // Prioritize user's GPS timezone: if the selected map area has the same offset
+    // as the user's GPS zone, use the GPS timezone name for the selection.
+    if (state.gpsTzid && getUtcOffset(state.gpsTzid) === currentOffset) {
+      newTzid = state.gpsTzid;
+    }
+
+    if (state.selectedZone === currentOffset && state.temporaryTimezone === newTzid) {
       // Deselecting the current timezone
       state.selectedZone = null;
       state.temporaryTimezone = null;
@@ -151,9 +157,9 @@ async function setupTimezoneMapListeners() {
     
     const feature = event.feature;
     const currentOffset = feature.getProperty('current_offset') as number;
-    const tzidFromFeature = feature.getProperty('tz_name1st') as string | null;
     
     // Always set the hover state for visual highlighting
+    const tzidFromFeature = feature.getProperty('tz_name1st') as string | null;
     state.hoveredZone = currentOffset;
     state.hoveredTimezoneName = tzidFromFeature;
     updateMapHighlights();
@@ -163,7 +169,6 @@ async function setupTimezoneMapListeners() {
     const validHoveredTzid = getValidTimezoneName(tzidFromFeature, zoneFromFeature);
     
     if (currentOffset === state.gpsZone || (state.selectedZone === currentOffset && state.temporaryTimezone === validHoveredTzid)) {
-      // Don't show the card, it's redundant
       updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, null, 'offset');
     } else {
       updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, feature, 'offset');
@@ -220,8 +225,8 @@ function updateMapHighlights() {
         }
 
         if (isDirectlyHovered) {
-            style.strokeColor = 'rgba(255, 255, 255, 0.4)'; // More subtle outline color
-            style.strokeWeight = 1; // Thinner outline
+            style.strokeColor = 'rgba(255, 255, 255, 0.4)';
+            style.strokeWeight = 1;
             style.zIndex = 4;
         }
 
