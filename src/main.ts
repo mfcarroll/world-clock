@@ -38,12 +38,23 @@ function saveTimezones() {
 }
 
 function addUniqueTimezoneToList(tz: string) {
-    if (!state.addedTimezones.includes(tz)) {
-        state.addedTimezones.push(tz);
-        saveTimezones();
-        renderWorldClocks();
+    // If the exact timezone is already in the list, do nothing.
+    if (state.addedTimezones.includes(tz)) {
+        return;
     }
+
+    const newOffset = getUtcOffset(tz);
+
+    // Remove any existing timezones from the list that have the same UTC offset.
+    state.addedTimezones = state.addedTimezones.filter(existingTz => getUtcOffset(existingTz) !== newOffset);
+
+    // Add the new timezone.
+    state.addedTimezones.push(tz);
+
+    saveTimezones();
+    renderWorldClocks();
 }
+
 
 function createClockElement(tz: string): HTMLElement {
     const template = dom.worldClockTemplate;
@@ -122,7 +133,7 @@ function renderWorldClocks() {
 function handleAddTimezone() {
     const newTimezone = dom.timezoneInput.value;
     const ianaTimezones = Intl.supportedValuesOf('timeZone');
-    if (newTimezone && !state.addedTimezones.includes(newTimezone) && ianaTimezones.includes(newTimezone)) {
+    if (newTimezone && ianaTimezones.includes(newTimezone)) {
         addUniqueTimezoneToList(newTimezone);
         if (state.localTimezone) {
           updateAllClocks();
@@ -194,6 +205,12 @@ async function startApp() {
   document.addEventListener('temporarytimezonechanged', () => {
     renderWorldClocks();
     updateAllClocks();
+  });
+
+  // Listen for the custom event from the map to replace a timezone
+  document.addEventListener('replacetimezone', (e: Event) => {
+      const { tzid } = (e as CustomEvent).detail;
+      addUniqueTimezoneToList(tzid);
   });
 
   document.addEventListener('gpstimezonefound', (e) => {

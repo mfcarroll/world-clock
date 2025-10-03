@@ -67,14 +67,26 @@ function selectFeature(feature: google.maps.Data.Feature) {
     const tzid = feature.getProperty('tz_name1st') as string | null;
     const currentOffset = feature.getProperty('current_offset') as number;
     const zone = feature.getProperty('zone') as number;
+    const newTzid = getValidTimezoneName(tzid, zone);
   
     if (state.selectedZone === currentOffset) {
+      // Deselecting the current timezone
       state.selectedZone = null;
       state.temporaryTimezone = null;
       updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, null, 'offset');
     } else {
+      // Selecting a new timezone
+      const existingTzWithOffset = state.addedTimezones.find(
+          (tz) => getUtcOffset(tz) === currentOffset
+      );
+
+      // If a clock with the same time already exists, replace it immediately.
+      if (existingTzWithOffset && existingTzWithOffset !== newTzid) {
+          document.dispatchEvent(new CustomEvent('replacetimezone', { detail: { tzid: newTzid } }));
+      }
+
       state.selectedZone = currentOffset;
-      state.temporaryTimezone = getValidTimezoneName(tzid, zone);
+      state.temporaryTimezone = newTzid;
       updateCard(dom.selectedTimezoneDetailsEl, dom.selectedTimezoneNameEl, dom.selectedTimezoneOffsetEl, feature, 'offset');
     }
   
@@ -93,9 +105,11 @@ export function selectTimezone(tzid: string) {
     const offset = getUtcOffset(tzid);
     let found = false;
 
-    state.timezoneMap.data.forEach((feature: google.maps.Data.Feature) => {
+    // Using 'any' as a workaround for a complex typing issue where TypeScript
+    // incorrectly infers the feature type as 'never'.
+    state.timezoneMap.data.forEach((feature: any) => {
         if (!found && feature.getProperty('current_offset') === offset) {
-            selectFeature(feature);
+            selectFeature(feature as google.maps.Data.Feature);
             found = true;
         }
     });
@@ -134,7 +148,15 @@ async function setupTimezoneMapListeners() {
   
   state.timezoneMap.data.addListener('mouseover', (event: google.maps.Data.MouseEvent) => {
     if (isTouchDevice) return; // Ignore hover on touch devices
-    state.hoveredZone = event.feature.getProperty('current_offset') as number;
+    
+    const currentOffset = event.feature.getProperty('current_offset') as number;
+
+    // Do not show hover details if the timezone is already the user's or the selected one.
+    if (currentOffset === state.gpsZone || currentOffset === state.selectedZone) {
+      return;
+    }
+
+    state.hoveredZone = currentOffset;
     updateMapHighlights();
     updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, event.feature, 'offset');
   });
@@ -148,6 +170,10 @@ async function setupTimezoneMapListeners() {
   
   state.timezoneMap.data.addListener('click', (event: google.maps.Data.MouseEvent) => {
     selectFeature(event.feature);
+    
+    // After selecting, explicitly clear the hover state to hide the white box immediately.
+    state.hoveredZone = null;
+    updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, null, 'offset');
   });
 }
 
