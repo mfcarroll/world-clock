@@ -15,13 +15,14 @@ interface AppState {
     localTimezone: string | null;
     gpsTzid: string | null;
     gpsZone: number | null;
+    gpsTimezoneSelected: boolean; // Tracks if the user's own timezone is selected
     temporaryTimezone: string | null;
     addedTimezones: string[];
     timezonesFromUrl: string[] | null;
 
     // Map Interaction State
     hoveredZone: number | null;
-    hoveredTimezoneName: string | null; // To track the specific shape under the cursor
+    hoveredTimezoneName: string | null;
     selectedZone: number | null;
 
     // Time State
@@ -44,13 +45,14 @@ export const state: AppState = {
     localTimezone: null,
     gpsTzid: null,
     gpsZone: null,
+    gpsTimezoneSelected: false, // Default to false
     temporaryTimezone: null,
     addedTimezones: JSON.parse(localStorage.getItem('worldClocks') || '[]'),
     timezonesFromUrl: null,
 
     // Map Interaction State
     hoveredZone: null,
-    hoveredTimezoneName: null, // Default to null
+    hoveredTimezoneName: null,
     selectedZone: null,
 
     // Time State

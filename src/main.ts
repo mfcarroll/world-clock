@@ -38,23 +38,17 @@ function saveTimezones() {
 }
 
 function addUniqueTimezoneToList(tz: string) {
-    // If the exact timezone is already in the list, do nothing.
     if (state.addedTimezones.includes(tz)) {
         return;
     }
 
     const newOffset = getUtcOffset(tz);
 
-    // Prioritize user's GPS timezone: if the new timezone has the same offset as the
-    // GPS zone but a different name, do not add it.
     if (state.gpsTzid && getUtcOffset(state.gpsTzid) === newOffset && tz !== state.gpsTzid) {
         return;
     }
 
-    // Remove any other existing timezones from the list that have the same UTC offset.
     state.addedTimezones = state.addedTimezones.filter(existingTz => getUtcOffset(existingTz) !== newOffset);
-
-    // Add the new timezone.
     state.addedTimezones.push(tz);
 
     saveTimezones();
@@ -69,23 +63,18 @@ function createClockElement(tz: string): HTMLElement {
 
     clockDiv.id = `clock-${tz.replace(/\//g, '-')}`;
 
-    // Start with a clean slate for borders
     clockDiv.classList.remove('border-transparent', 'border-blue-500', 'border-yellow-500');
 
-    // Style for GPS-detected timezone
-    if (tz === state.gpsTzid) {
-        clockDiv.classList.add('border-blue-500');
-    }
-    // Style for the timezone currently selected on the map
-    else if (tz === state.temporaryTimezone) {
+    if (tz === state.gpsTzid && state.gpsTimezoneSelected) {
         clockDiv.classList.add('border-yellow-500');
-    }
-    // Default for all other clocks
-    else {
+    } else if (tz === state.gpsTzid) {
+        clockDiv.classList.add('border-blue-500');
+    } else if (tz === state.temporaryTimezone) {
+        clockDiv.classList.add('border-yellow-500');
+    } else {
         clockDiv.classList.add('border-transparent');
     }
 
-    // Add a special background if the selected timezone hasn't been "pinned" yet
     if (tz === state.temporaryTimezone && !state.addedTimezones.includes(tz)) {
         clockDiv.classList.add('bg-yellow-800', 'bg-opacity-50');
     } else {
@@ -108,7 +97,6 @@ function createClockElement(tz: string): HTMLElement {
     removeBtn.dataset.timezone = tz;
     pinBtn.dataset.timezone = tz;
 
-    // Show 'pin' button for temporary timezones, 'remove' for others
     if (tz === state.temporaryTimezone && !state.addedTimezones.includes(tz)) {
         removeBtn.classList.add('hidden');
         pinBtn.classList.remove('hidden');
@@ -213,7 +201,17 @@ async function startApp() {
     updateAllClocks();
   });
 
-  // Listen for the custom event from the map to replace a timezone
+  document.addEventListener('gpstimezoneSelectionChanged', (e: Event) => {
+      const { selected } = (e as CustomEvent).detail;
+      if (selected) {
+          dom.userTimezoneDetailsEl.classList.add('border-yellow-500');
+          dom.userTimezoneDetailsEl.classList.remove('border-blue-500');
+      } else {
+          dom.userTimezoneDetailsEl.classList.remove('border-yellow-500');
+          dom.userTimezoneDetailsEl.classList.add('border-blue-500');
+      }
+  });
+
   document.addEventListener('replacetimezone', (e: Event) => {
       const { tzid } = (e as CustomEvent).detail;
       addUniqueTimezoneToList(tzid);
@@ -231,7 +229,7 @@ async function startApp() {
           state.selectedZone = getUtcOffset(timezoneToSelect);
           document.dispatchEvent(new CustomEvent('temporarytimezonechanged'));
       }
-      state.timezonesFromUrl = null; // Clear after processing
+      state.timezonesFromUrl = null;
     }
 
     renderWorldClocks();
