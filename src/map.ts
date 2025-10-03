@@ -9,6 +9,75 @@ import { point as turfPoint, booleanPointInPolygon } from '@turf/turf';
 let userTimeInterval: number | null = null;
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
+/**
+ * Draws the track from track.json as a thin blue line.
+ */
+async function drawTrackLine() {
+    if (!state.timezoneMap) return;
+
+    try {
+        const response = await fetch('/track.json');
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+
+        // The JSON has a nested array structure, so we grab the first element.
+        const coordinatePairs = data.coordinates[0];
+
+        const pathCoordinates = coordinatePairs.map((coords: number[]) => ({ lat: coords[1], lng: coords[0] }));
+
+        new google.maps.Polyline({
+            path: pathCoordinates,
+            geodesic: true,
+            strokeColor: '#4285F4',
+            strokeOpacity: 0.8,
+            strokeWeight: 2, // Thinner line
+            map: state.timezoneMap,
+        });
+
+    } catch (error) {
+        console.error("Could not load or draw the track line:", error);
+    }
+}
+
+/**
+ * Draws the route from route.json as a thin dotted blue line.
+ */
+async function drawDottedRouteLine() {
+    if (!state.timezoneMap) return;
+
+    try {
+        const response = await fetch('/route.json');
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        
+        const pathCoordinates = data.coordinates.map((coords: number[]) => ({ lat: coords[1], lng: coords[0] }));
+
+        const dottedLineSymbol = {
+            path: 'M 0,-1 0,1',
+            strokeOpacity: 1,
+            scale: 2,
+        };
+
+        new google.maps.Polyline({
+            path: pathCoordinates,
+            geodesic: true,
+            strokeColor: '#4285F4',
+            strokeOpacity: 0, // The line itself is invisible, only the icons are shown
+            strokeWeight: 2,
+            icons: [{
+                icon: dottedLineSymbol,
+                offset: '0',
+                repeat: '10px'
+            }],
+            map: state.timezoneMap,
+        });
+
+    } catch (error) {
+        console.error("Could not load or draw the dotted route line:", error);
+    }
+}
+
+
 // --- HELPER FUNCTIONS ---
 
 function updateCard(
@@ -133,7 +202,7 @@ export function selectTimezone(tzid: string) {
 }
 
 export async function initMaps() {
-  const { Map } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
+  const { Map, Polyline } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
   const { Marker } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
 
   const mapOptions: google.maps.MapOptions = {
@@ -163,6 +232,8 @@ export async function initMaps() {
   state.timezoneMapMarker = new Marker({ map: state.timezoneMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon });
 
   setupTimezoneMapListeners();
+  drawTrackLine();
+  drawDottedRouteLine();
 }
 
 async function setupTimezoneMapListeners() {
@@ -306,7 +377,7 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   
   dom.locationLoader.classList.add('hidden');
   dom.locationContent.classList.remove('hidden');
-  dom.locationContent.classList.add('grid'); // Add grid class dynamically
+  dom.locationContent.classList.add('grid');
 
   updateLocationMap(latitude, longitude);
   updateTimezoneMapMarker(latitude, longitude);
