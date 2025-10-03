@@ -21,6 +21,7 @@ interface AppState {
 
     // Map Interaction State
     hoveredZone: number | null;
+    hoveredTimezoneName: string | null; // To track the specific shape under the cursor
     selectedZone: number | null;
 
     // Time State
@@ -49,6 +50,7 @@ export const state: AppState = {
 
     // Map Interaction State
     hoveredZone: null,
+    hoveredTimezoneName: null, // Default to null
     selectedZone: null,
 
     // Time State

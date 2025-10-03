@@ -147,79 +147,82 @@ async function setupTimezoneMapListeners() {
   state.timezoneMap.data.addGeoJson(state.geoJsonData);
   
   state.timezoneMap.data.addListener('mouseover', (event: google.maps.Data.MouseEvent) => {
-    if (isTouchDevice) return; // Ignore hover on touch devices
+    if (isTouchDevice) return;
     
-    const currentOffset = event.feature.getProperty('current_offset') as number;
-
-    // Do not show hover details if the timezone is already the user's or the selected one.
-    if (currentOffset === state.gpsZone || currentOffset === state.selectedZone) {
-      return;
-    }
-
+    const feature = event.feature;
+    const currentOffset = feature.getProperty('current_offset') as number;
+    const tzidFromFeature = feature.getProperty('tz_name1st') as string | null;
+    
+    // Always set the hover state for visual highlighting
     state.hoveredZone = currentOffset;
+    state.hoveredTimezoneName = tzidFromFeature;
     updateMapHighlights();
-    updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, event.feature, 'offset');
+
+    // Now, separately decide whether to show the informational hover card
+    const zoneFromFeature = feature.getProperty('zone') as number;
+    const validHoveredTzid = getValidTimezoneName(tzidFromFeature, zoneFromFeature);
+    
+    if (currentOffset === state.gpsZone || (state.selectedZone === currentOffset && state.temporaryTimezone === validHoveredTzid)) {
+      // Don't show the card, it's redundant
+      updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, null, 'offset');
+    } else {
+      updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, feature, 'offset');
+    }
   });
   
-  state.timezoneMap.data.addListener('mouseout', () => {
-    if (isTouchDevice) return; // Ignore hover on touch devices
+  document.getElementById('timezone-map')!.addEventListener('mouseleave', () => {
+    if (isTouchDevice) return;
     state.hoveredZone = null;
+    state.hoveredTimezoneName = null;
     updateMapHighlights();
     updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, null, 'offset');
   });
   
   state.timezoneMap.data.addListener('click', (event: google.maps.Data.MouseEvent) => {
+    const wasSelected = state.selectedZone === event.feature.getProperty('current_offset');
+
     selectFeature(event.feature);
     
-    // After selecting, explicitly clear the hover state to hide the white box immediately.
-    state.hoveredZone = null;
-    updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, null, 'offset');
+    if (wasSelected) {
+      state.hoveredZone = event.feature.getProperty('current_offset') as number;
+      state.hoveredTimezoneName = event.feature.getProperty('tz_name1st') as string;
+      updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, event.feature, 'offset');
+    } else {
+      state.hoveredZone = null;
+      state.hoveredTimezoneName = null;
+      updateCard(dom.hoveredTimezoneDetailsEl, dom.hoveredTimezoneNameEl, dom.hoveredTimezoneOffsetEl, null, 'offset');
+    }
+    updateMapHighlights();
   });
 }
 
 function updateMapHighlights() {
     state.timezoneMap!.data.setStyle(feature => {
         const featureOffset = feature.getProperty('current_offset') as number;
+        const featureTzid = feature.getProperty('tz_name1st') as string;
 
         const styles = {
-            default: {
-                fillColor: 'transparent',
-                strokeColor: 'rgba(255, 255, 255, 0.2)',
-                strokeWeight: 1,
-                zIndex: 1,
-            },
-            gps: {
-                fillColor: 'rgba(63, 128, 255, 0.7)',
-                strokeColor: 'transparent',
-                strokeWeight: 2,
-                zIndex: 1,
-            },
-            hover: {
-                fillColor: 'rgba(255, 255, 255, 0.5)',
-                strokeColor: 'transparent',
-                strokeWeight: 2,
-                zIndex: 2,
-            },
-            selected: {
-                fillColor: 'rgba(255, 215, 0, 0.7)',
-                strokeColor: 'transparent',
-                strokeWeight: 2,
-                zIndex: 3,
-            },
+            default: { fillColor: 'transparent', strokeColor: 'rgba(255, 255, 255, 0.2)', strokeWeight: 1, zIndex: 1 },
+            gps: { fillColor: 'rgba(63, 128, 255, 0.7)', strokeColor: 'transparent', strokeWeight: 1, zIndex: 1 },
+            hover: { fillColor: 'rgba(255, 255, 255, 0.5)', strokeColor: 'transparent', strokeWeight: 1, zIndex: 2 },
+            selected: { fillColor: 'rgba(255, 215, 0, 0.7)', strokeColor: 'transparent', strokeWeight: 1, zIndex: 3 },
         };
 
-        let style = styles.default;
+        let style = { ...styles.default };
+        const isDirectlyHovered = state.hoveredTimezoneName !== null && state.hoveredTimezoneName === featureTzid;
 
-        if (state.gpsZone !== null && state.gpsZone === featureOffset) {
-            style = styles.gps;
+        if (state.gpsZone === featureOffset) {
+            style = { ...styles.gps };
+        } else if (state.selectedZone === featureOffset) {
+            style = { ...styles.selected };
+        } else if (state.hoveredZone === featureOffset) {
+            style = { ...styles.hover };
         }
 
-        if (state.hoveredZone !== null && state.hoveredZone === featureOffset) {
-            style = styles.hover;
-        }
-
-        if (state.selectedZone !== null && state.selectedZone === featureOffset) {
-            style = styles.selected;
+        if (isDirectlyHovered) {
+            style.strokeColor = 'rgba(255, 255, 255, 0.4)'; // More subtle outline color
+            style.strokeWeight = 1; // Thinner outline
+            style.zIndex = 4;
         }
 
         return style;
