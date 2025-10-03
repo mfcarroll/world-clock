@@ -1,66 +1,48 @@
-# GeoTime Dashboard
+# World Clock
 
-This is a modern, location-aware world clock dashboard built with Vite, TypeScript, and Tailwind CSS.
+This is a simple world clock application that allows you to view the time in different timezones. It uses the Google Maps API to display a map of the world with timezone boundaries.
 
 ## Features
 
--   **Real-time GPS Location:** Fetches and displays your current latitude and longitude.
--   **GPS-based & Device Time:** Shows a comparison between the time at your physical location and your device's system time.
--   **Dynamic Location Map:** Displays your current location with a pin on an embedded Google Map.
--   **Interactive Timezone Map:** A dynamic Google Map with an overlay of world timezone boundaries. Hover over a region to see its name.
--   **World Clock:** Add and remove timezones to compare times across the globe.
+* **World Clock:** View the time in multiple timezones at once.
+* **Timezone Map:** Explore a map of the world with timezone boundaries.
+* **Share Timezones:** Share a link to the application with a pre-configured set of timezones.
+* **Automatic Timezone Detection:** The application will automatically detect your local timezone using your browser's geolocation API.
 
-## Project Setup
+## How to Use
 
-### Prerequisites
+1.  **Add Timezones:** You can add timezones to the world clock by typing the name of a timezone in the input field and clicking the "Add" button.
+2.  **Explore the Map:** You can explore the timezone map by clicking and dragging the map.
+3.  **Share Timezones:** To share a link to the application with a pre-configured set of timezones, you can append a `timezones` parameter to the URL. For example:
 
--   [Node.js](https://nodejs.org/) (version 18.x or newer recommended)
--   A package manager like `npm` or `yarn`.
-
-### Installation
-
-1.  **Clone the repository or download the files** into a new project folder.
-
-2.  **Navigate into the project directory:**
-    ```bash
-    cd your-project-folder
     ```
-
-3.  **Install dependencies:**
-    ```bash
-    npm install
+    [https://example.com/?timezones=America/New_York,Europe/London,Asia/Tokyo](https://example.com/?timezones=America/New_York,Europe/London,Asia/Tokyo)
     ```
-
-4.  **Set Up API Keys:**
-    You need two API keys for the application to function correctly.
-
-    -   **Google Maps API Key:**
-        -   Go to the [Google Cloud Console](https://console.cloud.google.com/google/maps-apis/).
-        -   Enable the **"Maps JavaScript API"** and the **"Maps Embed API"**.
-        -   Create a new API key.
-        -   Open `index.html` and replace `YOUR_GOOGLE_MAPS_API_KEY` in the script URL with your actual key.
-
-    -   **TimeZoneDB API Key:**
-        -   Register for a free account at [TimeZoneDB](https://timezonedb.com/register).
-        -   Get your API key from your dashboard.
-        -   Open `src/main.ts` and replace `YOUR_TIMEZONEDB_API_KEY` with your actual key.
 
 ## Development
 
-To run the local development server with hot-reloading:
+To run the application locally, you will need to have Node.js and npm installed.
 
-```bash
-npm run dev
-```
+1.  Clone the repository:
 
-This will start a server, typically on `http://localhost:5173`. Open this URL in your browser.
+    ```
+    git clone [https://github.com/mfcarroll/world-clock.git](https://github.com/mfcarroll/world-clock.git)
+    ```
 
-## Building for Production
+2.  Install the dependencies:
 
-To compile and bundle the application for deployment (e.g., to GitHub Pages):
+    ```
+    npm install
+    ```
 
-```bash
-npm run build
-```
+3.  Start the development server:
 
-This command will create a `dist` directory containing the optimized, static HTML, CSS, and JavaScript files. You can then deploy the contents of this `dist` folder to any static hosting service.
+    ```
+    npm run dev
+    ```
+
+4.  Open your browser and navigate to `http://localhost:3000`.
+
+## License
+
+This project is licensed under the MIT License.

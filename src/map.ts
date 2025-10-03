@@ -130,41 +130,50 @@ async function setupTimezoneMapListeners() {
 
 function updateMapHighlights() {
     state.timezoneMap!.data.setStyle(feature => {
-        // UPDATED: Use current_offset instead of zone
         const featureOffset = feature.getProperty('current_offset') as number;
-        let zIndex = 1;
-        let fillColor = 'transparent';
-        let strokeColor = 'rgba(255, 255, 255, 0.2)'; 
-        let strokeWeight = 1;
 
-        // UPDATED: Use current_offset for all comparisons
+        const styles = {
+            default: {
+                fillColor: 'transparent',
+                strokeColor: 'rgba(255, 255, 255, 0.2)',
+                strokeWeight: 1,
+                zIndex: 1,
+            },
+            gps: {
+                fillColor: 'rgba(63, 128, 255, 0.7)',
+                strokeColor: 'transparent',
+                strokeWeight: 2,
+                zIndex: 1,
+            },
+            hover: {
+                fillColor: 'rgba(255, 255, 255, 0.5)',
+                strokeColor: 'transparent',
+                strokeWeight: 2,
+                zIndex: 2,
+            },
+            selected: {
+                fillColor: 'rgba(255, 215, 0, 0.7)',
+                strokeColor: 'transparent',
+                strokeWeight: 2,
+                zIndex: 3,
+            },
+        };
+
+        let style = styles.default;
+
         if (state.gpsZone !== null && state.gpsZone === featureOffset) {
-            fillColor = 'rgba(63, 128, 255, 0.7)';
-            strokeColor = 'transparent';
-            strokeWeight = 2;
-            zIndex = 1;
+            style = styles.gps;
         }
-        
+
         if (state.hoveredZone !== null && state.hoveredZone === featureOffset) {
-            fillColor = 'rgba(255, 255, 255, 0.5)';
-            strokeColor = 'transparent';
-            strokeWeight = 2;
-            zIndex = 2;
+            style = styles.hover;
         }
 
         if (state.selectedZone !== null && state.selectedZone === featureOffset) {
-            fillColor = 'rgba(255, 215, 0, 0.7)';
-            strokeColor = 'transparent';
-            strokeWeight = 2;
-            zIndex = 3;
+            style = styles.selected;
         }
 
-        return ({
-            fillColor,
-            strokeColor,
-            strokeWeight,
-            zIndex,
-        });
+        return style;
     });
 }
 

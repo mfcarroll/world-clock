@@ -10,23 +10,6 @@
     <div id="app-container" class="min-h-full p-4 sm:p-6 lg:p-8 bg-gray-900">
       <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-1 space-y-6">
-          <div id="location-card" class="card rounded-2xl shadow-lg p-6">
-            <h2 class="text-2xl font-semibold text-white mb-4 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3 text-blue-400"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              Your Location
-            </h2>
-            <div id="location-loader" class="space-y-3">
-              <div class="h-4 bg-gray-700 rounded w-3/4 skeleton"></div>
-              <div class="h-4 bg-gray-700 rounded w-1/2 skeleton"></div>
-              <div class="h-4 bg-gray-700 rounded w-5/6 skeleton"></div>
-            </div>
-            <div id="location-content" class="hidden space-y-2 text-lg">
-              <p><strong>Lat:</strong> <span id="latitude" class="font-mono">--</span></p>
-              <p><strong>Lon:</strong> <span id="longitude" class="font-mono">--</span></p>
-              <p id="location-error" class="text-red-400 hidden"></p>
-            </div>
-          </div>
-
           <div class="card rounded-2xl shadow-lg p-6 text-center">
             <div id="time-loader" class="space-y-4">
               <div class="h-10 bg-gray-700 rounded w-3/4 mx-auto skeleton"></div>
@@ -45,8 +28,23 @@
             </div>
           </div>
           
+          <div id="location-card" class="card rounded-2xl shadow-lg p-6">
+            <h2 class="text-xl font-semibold text-white mb-4 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3 text-blue-400"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              Your Location
+            </h2>
+            <div id="location-loader" class="space-y-3">
+              <div class="h-4 bg-gray-700 rounded w-3/4 skeleton"></div>
+              <div class="h-4 bg-gray-700 rounded w-1/2 skeleton"></div>
+              <div class="h-4 bg-gray-700 rounded w-5/6 skeleton"></div>
+            </div>
+            <div id="location-content" class="hidden space-y-2 text-lg">
+              <p><strong>Lat:</strong> <span id="latitude" class="font-mono">--</span></p>
+              <p><strong>Lon:</strong> <span id="longitude" class="font-mono">--</span></p>
+              <p id="location-error" class="text-red-400 hidden"></p>
+            </div>
+          </div>
           <div class="card rounded-2xl shadow-lg overflow-hidden aspect-w-1 aspect-h-1">
-            <h2 class="text-xl font-semibold text-white p-4">Location Map</h2>
             <div id="location-map" class="bg-gray-700 w-full h-64 flex items-center justify-center text-gray-400">
               <span>Initializing Map...</span>
             </div>
@@ -80,7 +78,7 @@
             </div>
           </div>
           <div class="card rounded-2xl shadow-lg p-6">
-            <h2 class="text-2xl font-semibold text-white mb-4">World Clock</h2>
+            <h2 class="text-xl font-semibold text-white mb-4">World Clock</h2>
             <div class="flex flex-col sm:flex-row gap-2 mb-4">
               <input list="timezone-list" id="timezone-input" class="flex-grow bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Add timezone (e.g., Europe/London)">
               <datalist id="timezone-list"></datalist>
