@@ -7,6 +7,28 @@ import { point as turfPoint, booleanPointInPolygon } from '@turf/turf';
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
 /**
+ * [NEW HELPER]
+ * Converts any timezone string into a user-friendly display name.
+ * e.g., "America/Vancouver" -> "Vancouver"
+ * e.g., "Etc/GMT-11" -> "UTC+11"
+ * @param tz The IANA or "Etc/GMT" timezone string.
+ * @returns A formatted string for display in the UI.
+ */
+export function getDisplayTimezoneName(tz: string): string {
+    if (tz.startsWith('Etc/GMT')) {
+        const offsetMatch = tz.match(/[+-](\d+(?:\.\d+)?)/);
+        if (offsetMatch) {
+            // Etc/GMT signs are inverted.
+            const offset = -parseFloat(offsetMatch[0]);
+            return `UTC${offset >= 0 ? '+' : ''}${offset}`;
+        }
+    }
+    // For standard IANA names like 'America/Vancouver', return the city part.
+    return tz.split('/').pop()?.replace(/_/g, ' ') || tz;
+}
+
+
+/**
  * [FALLBACK FUNCTION]
  * Finds a timezone for a given coordinate by checking against the local GeoJSON data.
  * @param lat The latitude.
@@ -22,10 +44,10 @@ function findTimezoneFromGeoJSON(lat: number, lon: number): string | null {
     const searchPoint = turfPoint([lon, lat]);
 
     for (const feature of state.geoJsonData.features) {
-        if (booleanPointInPolygon(searchPoint, feature.geometry)) {
+        if (feature.geometry && feature.geometry.coordinates && booleanPointInPolygon(searchPoint, feature.geometry)) {
             const tzid = feature.properties.tz_name1st;
             const zone = feature.properties.zone;
-            console.log(`Fallback successful: Found timezone "${tzid}" in local GeoJSON.`);
+            console.log(`Fallback successful: Found timezone "${tzid || `UTC${zone}`}" in local GeoJSON.`);
             return getValidTimezoneName(tzid, zone);
         }
     }
@@ -35,11 +57,6 @@ function findTimezoneFromGeoJSON(lat: number, lon: number): string | null {
 }
 
 
-/**
- * Parses the hour offset from a custom "Etc/GMT" timezone string.
- * @param timeZone The timezone string to parse.
- * @returns The offset in hours, or null if it's not a custom GMT string.
- */
 function getGmtOffset(timeZone: string): number | null {
     const gmtMatch = timeZone.match(/^Etc\/GMT([+-])(\d+(?:\.\d+)?)$/);
     if (gmtMatch) {
@@ -49,13 +66,6 @@ function getGmtOffset(timeZone: string): number | null {
     return null;
 }
 
-
-/**
- * Returns a formatted time string for a given timezone.
- * @param tz The IANA timezone name.
- * @param options Intl.DateTimeFormatOptions for formatting.
- * @returns The formatted time string.
- */
 export function getFormattedTime(tz: string, options: Intl.DateTimeFormatOptions = {}): string {
   const correctedTime = new Date(new Date().getTime() + state.timeOffset);
   const offset = getGmtOffset(tz);
@@ -105,7 +115,7 @@ export function updateAllClocks() {
         second: '2-digit'
       });
       dom.localDateEl.textContent = correctedTime.toLocaleDateString('en-US', { timeZone: localTimezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      dom.localTimezoneEl.textContent = localTimezone.replace(/_/g, ' ');
+      dom.localTimezoneEl.textContent = getDisplayTimezoneName(localTimezone);
     } catch (e) {
       dom.localTimeEl.textContent = "Error";
     }
@@ -179,18 +189,35 @@ export function getValidTimezoneName(tzid: string | null, zone: number): string 
     return `Etc/GMT${sign}${Math.abs(zone)}`;
 }
 
-
 export function getTimezoneOffset(tz1: string, tz2: string | null): string {
   if (!tz2) return '';
   if (tz1 === tz2) return 'Local time';
+
   try {
     const offset1 = getUtcOffset(tz1);
     const offset2 = getUtcOffset(tz2);
     const diffHours = offset1 - offset2;
 
     if (diffHours === 0) return 'Local time';
-    const diff = Number.isInteger(diffHours) ? diffHours : diffHours.toFixed(1);
-    return `${diffHours > 0 ? '+' : ''}${diff} hrs`;
+
+    const sign = diffHours > 0 ? '+' : '';
+    const wholeHours = Math.trunc(diffHours);
+    const remainder = Math.abs(diffHours) % 1;
+
+    let fraction = '';
+    if (remainder > 0.1 && remainder < 0.4) fraction = '¼';
+    else if (remainder >= 0.4 && remainder < 0.6) fraction = '½';
+    else if (remainder >= 0.6 && remainder < 0.9) fraction = '¾';
+
+    // If there's a fraction but the whole number part is 0, we should still show it.
+    if (fraction && wholeHours === 0) {
+      return `${sign}${fraction} hrs`;
+    }
+    
+    // Show the whole number only if it's not zero or if there's no fraction.
+    const hourPart = wholeHours !== 0 ? wholeHours : '';
+
+    return `${sign}${hourPart}${fraction} hrs`;
   } catch (e) {
     return 'Offset N/A';
   }

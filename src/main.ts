@@ -5,7 +5,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 import * as dom from './dom';
 import { state } from './state';
 import { initMaps, onLocationError, onLocationSuccess, selectTimezone } from './map';
-import { updateAllClocks, getUtcOffset, syncClock } from './time';
+import { updateAllClocks, getUtcOffset, syncClock, getDisplayTimezoneName } from './time';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
@@ -20,15 +20,12 @@ function handleUrlParameters() {
         if (timezonesParam) {
             const timezones = timezonesParam.split(',').filter(tz => tz.trim() !== '');
             
-            // Save to localStorage for persistence
             localStorage.setItem('worldClocks', JSON.stringify(timezones));
             state.addedTimezones = timezones;
             
-            // Save to state for initial selection after GPS lock
             state.timezonesFromUrl = timezones;
         }
 
-        // Remove the parameters from the URL without reloading the page
         history.replaceState(null, '', window.location.pathname);
     }
 }
@@ -81,16 +78,7 @@ function createClockElement(tz: string): HTMLElement {
         clockDiv.classList.remove('bg-yellow-800', 'bg-opacity-50');
     }
 
-    let city = tz.split('/').pop()?.replace(/_/g, ' ') || 'Unknown';
-    if (tz.startsWith('Etc/GMT')) {
-        const offsetMatch = tz.match(/[+-](\d+(?:\.\d+)?)/);
-        if (offsetMatch) {
-            const offset = -parseFloat(offsetMatch[0]);
-            city = `UTC${offset >= 0 ? '+' : ''}${offset}`;
-        }
-    }
-
-    clone.querySelector('.city')!.textContent = city;
+    clone.querySelector('.city')!.textContent = getDisplayTimezoneName(tz);
     const removeBtn = clone.querySelector('.remove-btn') as HTMLElement;
     const pinBtn = clone.querySelector('.pin-btn') as HTMLElement;
 
@@ -219,7 +207,7 @@ async function startApp() {
 
   document.addEventListener('gpstimezonefound', (e) => {
     const { tzid } = (e as CustomEvent).detail;
-    dom.localTimezoneEl.textContent = tzid.replace(/_/g, ' ');
+    dom.localTimezoneEl.textContent = getDisplayTimezoneName(tzid);
     addUniqueTimezoneToList(tzid);
 
     if (state.timezonesFromUrl) {
