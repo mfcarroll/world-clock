@@ -6,6 +6,22 @@ import { state } from './state';
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
 /**
+ * Parses the hour offset from a custom "Etc/GMT" timezone string.
+ * @param timeZone The timezone string to parse.
+ * @returns The offset in hours, or null if it's not a custom GMT string.
+ */
+function getGmtOffset(timeZone: string): number | null {
+    // The sign is inverted in the "Etc/GMT" standard (e.g., "Etc/GMT-5.5" means UTC+5.5).
+    const gmtMatch = timeZone.match(/^Etc\/GMT([+-])(\d+(?:\.\d+)?)$/);
+    if (gmtMatch) {
+        const sign = gmtMatch[1] === '+' ? -1 : 1;
+        return sign * parseFloat(gmtMatch[2]);
+    }
+    return null;
+}
+
+
+/**
  * Returns a formatted time string for a given timezone.
  * @param tz The IANA timezone name.
  * @param options Intl.DateTimeFormatOptions for formatting.
@@ -13,6 +29,14 @@ const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
  */
 export function getFormattedTime(tz: string, options: Intl.DateTimeFormatOptions = {}): string {
   const correctedTime = new Date(new Date().getTime() + state.timeOffset);
+  const offset = getGmtOffset(tz);
+
+  if (offset !== null) {
+    // Handle custom GMT timezones manually by applying the offset and formatting in UTC.
+    const targetTime = new Date(correctedTime.getTime() + offset * 3600000);
+    return targetTime.toLocaleTimeString('en-US', { timeZone: 'UTC', ...options });
+  }
+
   try {
     return correctedTime.toLocaleTimeString('en-US', { timeZone: tz, ...options });
   } catch (e) {
@@ -64,7 +88,17 @@ export function updateAllClocks() {
     const el = document.getElementById(`clock-${tz.replace(/\//g, '-')}`);
     if (el) {
         const timeString = getFormattedTime(tz, { hour: '2-digit', minute: '2-digit' });
-        const dateString = correctedTime.toLocaleDateString('en-US', { timeZone: tz, weekday: 'short' });
+        
+        // Also apply the GMT offset logic for the date string to prevent crashes.
+        let dateString;
+        const offset = getGmtOffset(tz);
+        if (offset !== null) {
+            const targetTime = new Date(correctedTime.getTime() + offset * 3600000);
+            dateString = targetTime.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short' });
+        } else {
+            dateString = correctedTime.toLocaleDateString('en-US', { timeZone: tz, weekday: 'short' });
+        }
+
         const timeDiff = getTimezoneOffset(tz, localTimezone);
 
         el.querySelector('.time')!.textContent = timeString;
@@ -87,6 +121,11 @@ export function updateAllClocks() {
  * @returns The UTC offset in hours.
  */
 export function getUtcOffset(timeZone: string): number {
+    const offset = getGmtOffset(timeZone);
+    if (offset !== null) {
+        return offset;
+    }
+
     try {
         const now = new Date();
         const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
@@ -108,7 +147,7 @@ export function getValidTimezoneName(tzid: string | null, zone: number): string 
             // Fallback if tzid is invalid
         }
     }
-    // Fallback for null, empty, or invalid tzid
+    // Fallback for null, empty, or invalid tzid. Note: Etc/GMT signs are inverted.
     const sign = zone <= 0 ? '+' : '-';
     return `Etc/GMT${sign}${Math.abs(zone)}`;
 }

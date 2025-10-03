@@ -88,9 +88,10 @@ function createClockElement(tz: string): HTMLElement {
 
     let city = tz.split('/').pop()?.replace(/_/g, ' ') || 'Unknown';
     if (tz.startsWith('Etc/GMT')) {
-        const offsetMatch = tz.match(/[+-]\d+/);
+        const offsetMatch = tz.match(/[+-](\d+(?:\.\d+)?)/); // Updated regex to capture decimals
         if (offsetMatch) {
-            const offset = -parseInt(offsetMatch[0], 10);
+            // FIX: Use parseFloat instead of parseInt to handle fractional offsets.
+            const offset = -parseFloat(offsetMatch[0]);
             city = `UTC${offset >= 0 ? '+' : ''}${offset}`;
         }
     }
