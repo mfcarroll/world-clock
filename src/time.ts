@@ -201,24 +201,27 @@ export function getTimezoneOffset(tz1: string, tz2: string | null): string {
 
     if (diffHours === 0) return 'Local time';
 
-    const sign = diffHours > 0 ? '+' : '';
-    const wholeHours = Math.trunc(diffHours);
-    const remainder = Math.abs(diffHours) % 1;
-
-    let fraction = '';
-    if (remainder > 0.1 && remainder < 0.4) fraction = '¼';
-    else if (remainder >= 0.4 && remainder < 0.6) fraction = '½';
-    else if (remainder >= 0.6 && remainder < 0.9) fraction = '¾';
-
-    // If there's a fraction but the whole number part is 0, we should still show it.
-    if (fraction && wholeHours === 0) {
-      return `${sign}${fraction} hrs`;
+    const sign = diffHours > 0 ? '+' : '−';
+    const absoluteOffset = Math.abs(diffHours);
+    const hours = Math.floor(absoluteOffset);
+    const fraction = absoluteOffset - hours;
+    let hourString = '';
+  
+    if (hours > 0) {
+      hourString += hours;
     }
-    
-    // Show the whole number only if it's not zero or if there's no fraction.
-    const hourPart = wholeHours !== 0 ? wholeHours : '';
-
-    return `${sign}${hourPart}${fraction} hrs`;
+  
+    if (fraction === 0.5) {
+      hourString += '½';
+    } else if (fraction === 0.75) {
+      hourString += '¾';
+    } else if (fraction === 0.25) {
+      hourString += '¼';
+    }
+  
+    const pluralization = absoluteOffset > 1 ? 's' : '';
+  
+    return `${sign}${hourString} hr${pluralization}`;
   } catch (e) {
     return 'Offset N/A';
   }
