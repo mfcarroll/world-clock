@@ -319,6 +319,13 @@ function updateLocationMap(lat: number, lon: number, accuracy: number) {
             const circleBounds = state.accuracyCircle.getBounds();
             if (circleBounds) {
                 state.locationMap.fitBounds(circleBounds);
+
+                google.maps.event.addListenerOnce(state.locationMap, 'idle', () => {
+                    if (state.locationMap && state.locationMap.getZoom()! > 17) {
+                        state.locationMap.setZoom(17);
+                    }
+                });
+
             } else {
                 state.locationMap.setCenter(pos);
                 state.locationMap.setZoom(12);
