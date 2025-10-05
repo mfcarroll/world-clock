@@ -16,10 +16,6 @@ faDom.watch();
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
-/**
- * Checks for a 'timezones' URL parameter and processes it.
- * If found, it saves the timezones to local storage and the app state, then cleans the URL.
- */
 function handleUrlParameters() {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('timezones')) {
@@ -136,18 +132,16 @@ function handleAddTimezone() {
 async function startApp() {
   handleUrlParameters();
   
-  // Detect iOS for layout of native app
   if (Capacitor.getPlatform() === 'ios') {
-    console.log('iOS platform detected. Adding .is-ios class to body.');
     document.body.classList.add('is-ios');
-  } else {
-    console.log('iOS platform not detected.');
   }
 
-  // Start clocks immediately with device time
-  startClocks();
+  const initialTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  state.localTimezone = initialTimezone;
+  state.gpsTzid = initialTimezone;
+  state.gpsZone = getUtcOffset(initialTimezone);
 
-  // Asynchronously synchronize the clock
+  startClocks();
   syncClock();
   
   const loader = new Loader({
@@ -209,7 +203,7 @@ async function startApp() {
     if (removeBtn) {
       const timezoneToRemove = (removeBtn as HTMLElement).dataset.timezone!;
       state.addedTimezones = state.addedTimezones.filter((tz: string) => tz !== timezoneToRemove);
-      saveTimezones();
+      localStorage.setItem('worldClocks', JSON.stringify(state.addedTimezones));
       renderWorldClocks();
       updateAllClocks();
     } else if (pinBtn) {

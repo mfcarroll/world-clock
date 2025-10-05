@@ -2,83 +2,12 @@
 
 import * as dom from './dom';
 import { state } from './state';
-import { fetchTimezoneForCoordinates, findTimezoneFromGeoJSON, startClocks, getTimezoneOffset, getFormattedTime, getUtcOffset, getValidTimezoneName, getDisplayTimezoneName } from './time';
+import { fetchTimezoneForCoordinates, findTimezoneFromGeoJSON, startClocks, getTimezoneOffset, getFormattedTime, getUtcOffset, getValidTimezoneName, getDisplayTimezoneName, updateAllClocks } from './time';
 import { locationMapStyles, worldTimezoneMapStyles } from './map-styles';
 import { distance, formatAccuracy } from './utils';
 
 let userTimeInterval: number | null = null;
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-/**
- * Draws the track from track.json as a thin blue line.
- */
-async function drawTrackLine() {
-    if (!state.timezoneMap) return;
-
-    try {
-        const response = await fetch('/track.json');
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-
-        // The JSON has a nested array structure, so we grab the first element.
-        const coordinatePairs = data.coordinates[0];
-
-        const pathCoordinates = coordinatePairs.map((coords: number[]) => ({ lat: coords[1], lng: coords[0] }));
-
-        new google.maps.Polyline({
-            path: pathCoordinates,
-            geodesic: true,
-            strokeColor: '#4285F4',
-            strokeOpacity: 0.8,
-            strokeWeight: 2, // Thinner line
-            map: state.timezoneMap,
-        });
-
-    } catch (error) {
-        console.error("Could not load or draw the track line:", error);
-    }
-}
-
-/**
- * Draws the route from route.json as a thin dotted blue line.
- */
-async function drawDottedRouteLine() {
-    if (!state.timezoneMap) return;
-
-    try {
-        const response = await fetch('/route.json');
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        
-        const pathCoordinates = data.coordinates.map((coords: number[]) => ({ lat: coords[1], lng: coords[0] }));
-
-        const dottedLineSymbol = {
-            path: 'M 0,-1 0,1',
-            strokeOpacity: 1,
-            scale: 2,
-        };
-
-        new google.maps.Polyline({
-            path: pathCoordinates,
-            geodesic: true,
-            strokeColor: '#4285F4',
-            strokeOpacity: 0, // The line itself is invisible, only the icons are shown
-            strokeWeight: 2,
-            icons: [{
-                icon: dottedLineSymbol,
-                offset: '0',
-                repeat: '10px'
-            }],
-            map: state.timezoneMap,
-        });
-
-    } catch (error) {
-        console.error("Could not load or draw the dotted route line:", error);
-    }
-}
-
-
-// --- HELPER FUNCTIONS ---
 
 function updateCard(
   cardEl: HTMLElement,
@@ -230,7 +159,6 @@ export async function initMaps() {
   const { Marker } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
   const { Circle } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
 
-
   const locationMapOptions: google.maps.MapOptions = {
     center: { lat: 0, lng: 0 },
     zoom: 2,
@@ -272,19 +200,17 @@ export async function initMaps() {
     center: { lat: 0, lng: 0 }
   });
 
+  dom.locationLoader.classList.add('hidden');
+  dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-3 text-red-400"></i> Location Unavailable`;
+  dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i> Accuracy: Unknown`;
+  dom.accuracyDisplayEl.classList.remove('hidden');
+
   const timezoneMapEl = document.getElementById('timezone-map') as HTMLElement;
   state.timezoneMap = new Map(timezoneMapEl, timezoneMapOptions);
   createMyLocationButton(state.timezoneMap);
   state.timezoneMapMarker = new Marker({ map: state.timezoneMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon, visible: false });
 
-  setupTimezoneMapListeners();
-
-  /**
-   * Intentionally commented out temporary track feature, but leaving available for future use
-   */
-
-  // drawTrackLine();
-  // drawDottedRouteLine();
+  await setupTimezoneMapListeners();
 }
 
 async function setupTimezoneMapListeners() {
@@ -333,8 +259,9 @@ async function setupTimezoneMapListeners() {
   });
 }
 
-function updateMapHighlights() {
-    state.timezoneMap!.data.setStyle(feature => {
+export function updateMapHighlights() {
+    if (!state.timezoneMap) return;
+    state.timezoneMap.data.setStyle(feature => {
         const featureOffset = feature.getProperty('current_offset') as number;
         const featureTzid = feature.getProperty('tz_name1st') as string;
 
@@ -346,7 +273,6 @@ function updateMapHighlights() {
         };
 
         let style = { ...styles.default };
-        const isDirectlyHovered = state.hoveredTimezoneName !== null && state.hoveredTimezoneName === featureTzid;
 
         if (state.gpsTimezoneSelected && state.gpsZone === featureOffset) {
             style = { ...styles.selected };
@@ -358,7 +284,7 @@ function updateMapHighlights() {
             style = { ...styles.hover };
         }
 
-        if (isDirectlyHovered) {
+        if (state.hoveredTimezoneName && state.hoveredTimezoneName === featureTzid) {
             style.strokeColor = 'rgba(255, 255, 255, 0.4)';
             style.strokeWeight = 1;
             style.zIndex = 4;
@@ -383,28 +309,31 @@ async function loadTimezoneGeoJson() {
 
     state.geoJsonData = geoJson;
     state.geoJsonLoaded = true;
-    console.log('Timezone GeoJSON has finished loading and is ready.');
-
   } catch (error) {
     console.error('Could not load timezone GeoJSON:', error);
   }
 }
 
 function updateLocationMap(lat: number, lon: number, accuracy: number) {
-    if (state.locationMap && state.locationMarker) {
+    if (state.locationMap && state.locationMarker && state.accuracyCircle) {
         const pos = { lat, lng: lon };
-        if (!state.initialLocationSet) {
-            state.locationMap.setCenter(pos);
-            state.locationMap.setZoom(12);
-        }
+
         state.locationMarker.setPosition(pos);
         state.locationMarker.setVisible(true);
+        state.accuracyCircle.setCenter(pos);
+        state.accuracyCircle.setRadius(accuracy);
 
-        state.accuracyCircle!.setCenter(pos);
-        state.accuracyCircle!.setRadius(accuracy);
+        if (!state.initialLocationSet) {
+            const circleBounds = state.accuracyCircle.getBounds();
+            if (circleBounds) {
+                state.locationMap.fitBounds(circleBounds);
+            } else {
+                state.locationMap.setCenter(pos);
+                state.locationMap.setZoom(12);
+            }
+        }
     }
 }
-
 
 function updateTimezoneMapMarker(lat: number, lon: number) {
   if (state.timezoneMap && state.timezoneMapMarker) {
@@ -420,12 +349,6 @@ function updateTimezoneMapMarker(lat: number, lon: number) {
 
 export function onLocationError(error: GeolocationPositionError) {
   console.error(`Geolocation error: ${error.message}`);
-  
-  dom.locationTitleEl.innerHTML = `
-    <i class="fas fa-location-dot fa-fw mr-3 text-red-400"></i>
-    Location Unavailable
-  `;
-  
   if (!state.localTimezone) {
     state.localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     startClocks();
@@ -486,4 +409,81 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
       document.dispatchEvent(new CustomEvent('gpstimezonefound', { detail: { tzid } }));
     }
   }
+}
+
+export function addUniqueTimezoneToList(tz: string) {
+    if (state.addedTimezones.includes(tz)) {
+        return;
+    }
+
+    const newOffset = getUtcOffset(tz);
+
+    if (state.gpsTzid && getUtcOffset(state.gpsTzid) === newOffset && tz !== state.gpsTzid) {
+        return;
+    }
+
+    state.addedTimezones = state.addedTimezones.filter(existingTz => getUtcOffset(existingTz) !== newOffset);
+    state.addedTimezones.push(tz);
+
+    localStorage.setItem('worldClocks', JSON.stringify(state.addedTimezones));
+    renderWorldClocks();
+}
+
+export function renderWorldClocks() {
+    dom.worldClocksContainerEl.innerHTML = '';
+
+    const timezonesToRender = [...state.addedTimezones];
+    if (state.temporaryTimezone && !timezonesToRender.includes(state.temporaryTimezone)) {
+        timezonesToRender.push(state.temporaryTimezone);
+    }
+
+    timezonesToRender
+        .sort((a, b) => getUtcOffset(a) - getUtcOffset(b))
+        .forEach((tz: string) => {
+            const clockElement = createClockElement(tz);
+            dom.worldClocksContainerEl.appendChild(clockElement);
+        });
+}
+
+function createClockElement(tz: string): HTMLElement {
+    const template = dom.worldClockTemplate;
+    const clone = template.content.cloneNode(true) as DocumentFragment;
+    const clockDiv = clone.querySelector('.grid') as HTMLElement;
+
+    clockDiv.id = `clock-${tz.replace(/\//g, '-')}`;
+
+    clockDiv.classList.remove('border-transparent', 'border-blue-500', 'border-yellow-500');
+
+    if (tz === state.gpsTzid && state.gpsTimezoneSelected) {
+        clockDiv.classList.add('border-yellow-500');
+    } else if (tz === state.gpsTzid) {
+        clockDiv.classList.add('border-blue-500');
+    } else if (tz === state.temporaryTimezone) {
+        clockDiv.classList.add('border-yellow-500');
+    } else {
+        clockDiv.classList.add('border-transparent');
+    }
+
+    if (tz === state.temporaryTimezone && !state.addedTimezones.includes(tz)) {
+        clockDiv.classList.add('bg-yellow-800', 'bg-opacity-50');
+    } else {
+        clockDiv.classList.remove('bg-yellow-800', 'bg-opacity-50');
+    }
+
+    clone.querySelector('.city')!.textContent = getDisplayTimezoneName(tz);
+    const removeBtn = clone.querySelector('.remove-btn') as HTMLElement;
+    const pinBtn = clone.querySelector('.pin-btn') as HTMLElement;
+
+    removeBtn.dataset.timezone = tz;
+    pinBtn.dataset.timezone = tz;
+
+    if (tz === state.temporaryTimezone && !state.addedTimezones.includes(tz)) {
+        removeBtn.classList.add('hidden');
+        pinBtn.classList.remove('hidden');
+    } else {
+        removeBtn.classList.remove('hidden');
+        pinBtn.classList.add('hidden');
+    }
+
+    return clockDiv;
 }

@@ -28,7 +28,7 @@ export const addTimezoneBtn = document.getElementById('add-timezone-btn')!;
 export const worldClocksContainerEl = document.getElementById('world-clocks-container')!;
 export const worldClockTemplate = document.getElementById('world-clock-template') as HTMLTemplateElement;
 
-// Timezone Map Details - UPDATED
+// Timezone Map Details
 export const userTimezoneDetailsEl = document.getElementById('user-timezone-details')!;
 export const userTimezoneNameEl = document.getElementById('user-timezone-name')!;
 export const userTimezoneTimeEl = document.getElementById('user-timezone-time')!;

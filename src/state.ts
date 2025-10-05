@@ -10,7 +10,7 @@ export interface AppState {
     timezoneMap: google.maps.Map | null;
     locationMarker: google.maps.Marker | null;
     timezoneMapMarker: google.maps.Marker | null;
-    accuracyCircle: google.maps.Circle | null; // Add this line
+    accuracyCircle: google.maps.Circle | null;
     initialLocationSet: boolean;
     lastFetchedCoords: { lat: number, lon: number };
     geoJsonData: any | null;
@@ -34,7 +34,7 @@ export const state: AppState = {
     timezoneMap: null,
     locationMarker: null,
     timezoneMapMarker: null,
-    accuracyCircle: null, // And initialize it here
+    accuracyCircle: null,
     initialLocationSet: false,
     lastFetchedCoords: { lat: 0, lon: 0 },
     geoJsonData: null,

@@ -4,6 +4,7 @@ import * as dom from './dom';
 import { state } from './state';
 import { point as turfPoint } from '@turf/helpers';
 import { booleanPointInPolygon } from '@turf/boolean-point-in-polygon';
+import { getValidTimezoneName, getUtcOffset, getDisplayTimezoneName } from './map';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
@@ -48,15 +49,12 @@ export function findTimezoneFromGeoJSON(lat: number, lon: number): string | null
         if (feature.geometry && feature.geometry.coordinates && booleanPointInPolygon(searchPoint, feature.geometry)) {
             const tzid = feature.properties.tz_name1st;
             const zone = feature.properties.zone;
-            console.log(`Fallback successful: Found timezone "${tzid || `UTC${zone}`}" in local GeoJSON.`);
             return getValidTimezoneName(tzid, zone);
         }
     }
 
-    console.log("Fallback failed: No matching timezone found in local GeoJSON for the given coordinates.");
     return null;
 }
-
 
 function getGmtOffset(timeZone: string): number | null {
     const gmtMatch = timeZone.match(/^Etc\/GMT([+-])(\d+(?:\.\d+)?)$/);
@@ -84,7 +82,6 @@ export function getFormattedTime(tz: string, options: Intl.DateTimeFormatOptions
 }
 
 export async function syncClock() {
-  console.log('Performing initial clock synchronization...');
   try {
     const GCF_URL = 'https://get-utc-time-100547663673.us-west1.run.app/';
     
@@ -97,14 +94,12 @@ export async function syncClock() {
     
     let offset = serverUtcTime - localDeviceTime;
 
-    if (Math.abs(offset) < 500) { // If offset is less than 0.5s, assume it's latency
+    if (Math.abs(offset) < 500) {
       offset = 0;
     }
     
     state.timeOffset = offset;
     
-    console.log(`Clock synchronized. Device offset is ${state.timeOffset}ms.`);
-
   } catch (error) {
     console.error('Could not synchronize clock:', error);
     state.timeOffset = 0;
@@ -240,7 +235,6 @@ export function startClocks() {
 }
 
 export async function fetchTimezoneForCoordinates(lat: number, lon: number): Promise<string | null> {
-  console.log(`Fetching timezone from Google API for Lat: ${lat}, Lon: ${lon}`);
   try {
     const timestamp = Math.floor(Date.now() / 1000);
     const apiUrl = `https://maps.googleapis.com/maps/api/timezone/json?location=${lat},${lon}&timestamp=${timestamp}&key=${GOOGLE_MAPS_API_KEY}`;
@@ -252,7 +246,6 @@ export async function fetchTimezoneForCoordinates(lat: number, lon: number): Pro
     if (data.status === 'OK' && data.timeZoneId) {
       return data.timeZoneId;
     } else if (data.status === 'ZERO_RESULTS') {
-        console.log("Google API returned ZERO_RESULTS. Initiating fallback to local GeoJSON.");
         return findTimezoneFromGeoJSON(lat, lon);
     } else {
       throw new Error(data.errorMessage || 'Failed to fetch timezone from Google.');
