@@ -46,3 +46,7 @@ To run the application locally, you will need to have Node.js and npm installed.
 ## License
 
 This project is licensed under the MIT License.
+
+## Privacy Policy
+
+This app does not collect any personal or usage information of any kind.
