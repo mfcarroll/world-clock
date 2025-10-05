@@ -10,21 +10,18 @@ let userTimeInterval: number | null = null;
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
 export function showLocationUnavailable() {
-  // Use the existing initialLocationSet flag to prevent this from running if location is already found
-  if (state.initialLocationSet) return;
-  
-  dom.locationLoader.classList.add('hidden'); // Hide the loading skeletons
-  dom.locationContent.classList.remove('hidden'); // Show the main content area
+  if (state.locationAvailable) return;
 
-  // Update the title to show the unavailable state
-  dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-3 text-red-400"></i> Location Unavailable`;
+  console.log("Location unavailable")
   
-  // Set placeholder text to maintain layout
+  dom.locationLoader.classList.add('hidden');
+  dom.locationContent.classList.remove('hidden');
+
+  dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-3 text-red-400"></i>Location Unavailable`;
   dom.latitudeEl.textContent = '---.----°';
   dom.longitudeEl.textContent = '---.----°';
   
-  // Update the accuracy display
-  dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i> Accuracy: Unknown`;
+  dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i>Accuracy: Unknown`;
   dom.accuracyDisplayEl.classList.remove('hidden');
 }
 
@@ -353,7 +350,6 @@ function updateTimezoneMapMarker(lat: number, lon: number) {
     const pos = { lat, lng: lon };
     if (!state.initialLocationSet) {
         state.timezoneMap.setCenter(pos);
-        state.initialLocationSet = true;
     }
     state.timezoneMapMarker.setPosition(pos);
     state.timezoneMapMarker.setVisible(true);
@@ -362,7 +358,6 @@ function updateTimezoneMapMarker(lat: number, lon: number) {
 
 export function onLocationError(error: GeolocationPositionError) {
   console.error(`Geolocation error: ${error.message}`);
-  showLocationUnavailable();
   if (!state.localTimezone) {
     state.localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     startClocks();
@@ -370,19 +365,20 @@ export function onLocationError(error: GeolocationPositionError) {
 }
 
 export async function onLocationSuccess(pos: GeolocationPosition) {
+  state.locationAvailable = true;
   console.log('Location success:', pos.coords);
   const { coords } = pos;
   const { latitude, longitude, accuracy, altitude, speed, heading } = coords;
 
   if (accuracy <= 15 && (altitude !== null || speed !== null || heading !== null)) {
-    dom.locationTitleEl.innerHTML = `<i class="fas fa-satellite-dish fa-fw mr-3 text-blue-400"></i> GPS Location`;
+    dom.locationTitleEl.innerHTML = `<i class="fas fa-satellite-dish fa-fw mr-3 text-blue-400"></i>GPS Location`;
   } else if (accuracy <= 15) {
-    dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-3 text-blue-400"></i> Accurate Location`;
+    dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-3 text-blue-400"></i>Accurate Location`;
   } else {
-    dom.locationTitleEl.innerHTML = `<i class="fas fa-wifi fa-fw mr-3 text-blue-400"></i> Approximate Location`;
+    dom.locationTitleEl.innerHTML = `<i class="fas fa-wifi fa-fw mr-3 text-gray-400"></i>Approximate Location`;
   }
   
-  dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i> Accuracy: ${formatAccuracy(accuracy)}`;
+  dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i>Accuracy: ${formatAccuracy(accuracy)}`;
   dom.accuracyDisplayEl.classList.remove('hidden');
 
   const formatCoordinate = (value: number, padding: number): string => {
@@ -398,6 +394,7 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
 
   updateLocationMap(latitude, longitude, accuracy);
   updateTimezoneMapMarker(latitude, longitude);
+  state.initialLocationSet = true;
 
   const geoJsonTz = findTimezoneFromGeoJSON(latitude, longitude);
   const crossedBoundary = geoJsonTz !== state.localTimezone;

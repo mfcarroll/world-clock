@@ -51,10 +51,10 @@ async function startApp() {
   handleUrlParameters();
   
   setTimeout(() => {
-    if (!state.initialLocationSet) {
+    if (!state.locationAvailable) {
       showLocationUnavailable();
     }
-  }, 2000);
+  }, 5000);
 
   if (Capacitor.getPlatform() === 'ios') {
     document.body.classList.add('is-ios');

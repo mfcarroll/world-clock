@@ -47,17 +47,16 @@
           
           <div class="card rounded-2xl shadow-lg overflow-hidden">
             <div class="p-6">
-              <h2 id="location-title" class="text-xl font-semibold text-white mb-4 flex items-center justify-center">Current Location</h2>
+              <h2 id="location-title" class="text-xl font-semibold text-white mb-4 flex items-center justify-center"><i class="fas fa-location-dot fa-fw mr-3 text-gray-400"></i>Current Location</h2>
               <div id="location-loader" class="space-y-3">
                 <div class="h-4 bg-gray-700 rounded w-3/4 skeleton"></div>
                 <div class="h-4 bg-gray-700 rounded w-1/2 skeleton"></div>
                 <div class="h-4 bg-gray-700 rounded w-5/6 skeleton"></div>
               </div>
               <div class="flex justify-center">
-                <div id="location-content" class="col-span-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-lg">
+                <div id="location-content" class="hidden col-span-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-lg">
                   <strong>Lat:</strong> <span id="latitude" class="font-mono">---.----°</span>
                   <strong>Lon:</strong> <span id="longitude" class="font-mono">---.----°</span>
-                  <p id="location-error" class="text-red-400 hidden"></p>
                 </div>
               </div>
               <p id="accuracy-display" class="text-center text-gray-400 mt-2 hidden"></p>
