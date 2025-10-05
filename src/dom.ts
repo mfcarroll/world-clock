@@ -9,6 +9,8 @@ export const locationContent = document.getElementById('location-content')!;
 export const latitudeEl = document.getElementById('latitude')!;
 export const longitudeEl = document.getElementById('longitude')!;
 export const locationErrorEl = document.getElementById('location-error')!;
+export const locationSourceEl = document.getElementById('location-source')!;
+
 
 // Time Card
 export const timeLoader = document.getElementById('time-loader')!;

@@ -362,9 +362,41 @@ export function onLocationError(error: GeolocationPositionError) {
   }
 }
 
+function isGpsLocation(coords: GeolocationCoordinates): boolean {
+  const { accuracy, altitude, speed, heading } = coords;
+  return accuracy <= 15 && altitude !== null && speed !== null && heading !== null;
+}
+
+function getGpsDeterminationRationale(coords: GeolocationCoordinates): string {
+    const { accuracy, altitude, speed, heading } = coords;
+    const reasons: string[] = [];
+
+    if (accuracy > 15) {
+        reasons.push(`inaccurate (accuracy is ${accuracy.toFixed(1)}m)`);
+    }
+    if (altitude === null) {
+        reasons.push('altitude not available');
+    }
+    if (speed === null) {
+        reasons.push('speed not available');
+    }
+    if (heading === null) {
+        reasons.push('heading not available');
+    }
+
+    if (reasons.length === 0) {
+        return 'GPS Determination: Success, location is considered genuine GPS.';
+    } else {
+        return `GPS Determination: Failed, location is considered approximate. Reason(s): ${reasons.join(', ')}.`;
+    }
+}
+
 export async function onLocationSuccess(pos: GeolocationPosition) {
-  const { latitude, longitude } = pos.coords;
-  console.log(`Location changed, fetching new timezone name...`);
+  const { coords } = pos;
+  const { latitude, longitude, altitude, altitudeAccuracy, heading, speed, accuracy } = coords;
+  
+  console.log('Location data:', JSON.stringify({ latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed }, null, 2));
+  console.log(getGpsDeterminationRationale(coords));
 
   const formatCoordinate = (value: number, padding: number): string => {
     const [integer, fractional] = value.toFixed(4).split('.');
@@ -374,9 +406,14 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   dom.latitudeEl.textContent = formatCoordinate(latitude, 4);
   dom.longitudeEl.textContent = formatCoordinate(longitude, 4);
   
+  const isGps = isGpsLocation(coords);
+  dom.locationSourceEl.innerHTML = isGps
+      ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-green-400"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> GPS Location`
+      : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-blue-400"><path d="M5 12.55a11 11 0 0 1 14 0"></path><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M9.17 16.24a5 5 0 0 1 5.66 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg> Approximate Location`;
+
+
   dom.locationLoader.classList.add('hidden');
   dom.locationContent.classList.remove('hidden');
-  dom.locationContent.classList.add('grid');
 
   updateLocationMap(latitude, longitude);
   updateTimezoneMapMarker(latitude, longitude);
