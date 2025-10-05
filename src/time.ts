@@ -4,42 +4,52 @@ import * as dom from './dom';
 import { state } from './state';
 import { point as turfPoint } from '@turf/helpers';
 import { booleanPointInPolygon } from '@turf/boolean-point-in-polygon';
-import { getValidTimezoneName, getUtcOffset, getDisplayTimezoneName } from './map';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
-/**
- * [NEW HELPER]
- * Converts any timezone string into a user-friendly display name.
- * e.g., "America/Vancouver" -> "Vancouver"
- * e.g., "Etc/GMT-11" -> "UTC+11"
- * @param tz The IANA or "Etc/GMT" timezone string.
- * @returns A formatted string for display in the UI.
- */
 export function getDisplayTimezoneName(tz: string): string {
     if (tz.startsWith('Etc/GMT')) {
         const offsetMatch = tz.match(/[+-](\d+(?:\.\d+)?)/);
         if (offsetMatch) {
-            // Etc/GMT signs are inverted.
             const offset = -parseFloat(offsetMatch[0]);
             return `UTC${offset >= 0 ? '+' : ''}${offset}`;
         }
     }
-    // For standard IANA names like 'America/Vancouver', return the city part.
     return tz.split('/').pop()?.replace(/_/g, ' ') || tz;
 }
 
+export function getUtcOffset(timeZone: string): number {
+    const gmtMatch = timeZone.match(/^Etc\/GMT([+-])(\d+(?:\.\d+)?)$/);
+    if (gmtMatch) {
+        const sign = gmtMatch[1] === '+' ? -1 : 1;
+        return sign * parseFloat(gmtMatch[2]);
+    }
 
-/**
- * [FALLBACK FUNCTION]
- * Finds a timezone for a given coordinate by checking against the local GeoJSON data.
- * @param lat The latitude.
- * @param lon The longitude.
- * @returns The IANA timezone name if a match is found, otherwise null.
- */
+    try {
+        const now = new Date();
+        const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const tzDate = new Date(now.toLocaleString('en-US', { timeZone }));
+        return (tzDate.getTime() - utcDate.getTime()) / 3600000;
+    } catch (e) {
+        return 99;
+    }
+}
+
+export function getValidTimezoneName(tzid: string | null, zone: number): string {
+    if (tzid && tzid.trim() !== '') {
+        try {
+            new Intl.DateTimeFormat('en-US', { timeZone: tzid });
+            return tzid;
+        } catch (e) {
+            // fallback
+        }
+    }
+    const sign = zone <= 0 ? '+' : '-';
+    return `Etc/GMT${sign}${Math.abs(zone)}`;
+}
+
 export function findTimezoneFromGeoJSON(lat: number, lon: number): string | null {
     if (!state.geoJsonData) {
-        console.error("GeoJSON data not loaded, cannot perform fallback search.");
         return null;
     }
 
@@ -160,35 +170,6 @@ export function updateAllClocks() {
 
   dom.timeLoader.classList.add('hidden');
   dom.timeContent.classList.remove('hidden');
-}
-
-export function getUtcOffset(timeZone: string): number {
-    const offset = getGmtOffset(timeZone);
-    if (offset !== null) {
-        return offset;
-    }
-
-    try {
-        const now = new Date();
-        const utcDate = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }));
-        const tzDate = new Date(now.toLocaleString('en-US', { timeZone }));
-        return (tzDate.getTime() - utcDate.getTime()) / 3600000;
-    } catch (e) {
-        return 99;
-    }
-}
-
-export function getValidTimezoneName(tzid: string | null, zone: number): string {
-    if (tzid && tzid.trim() !== '') {
-        try {
-            new Intl.DateTimeFormat('en-US', { timeZone: tzid });
-            return tzid;
-        } catch (e) {
-            // Fallback for invalid tzid
-        }
-    }
-    const sign = zone <= 0 ? '+' : '-';
-    return `Etc/GMT${sign}${Math.abs(zone)}`;
 }
 
 export function getTimezoneOffset(tz1: string, tz2: string | null): string {

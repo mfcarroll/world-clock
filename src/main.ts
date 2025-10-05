@@ -4,7 +4,7 @@ import './style.css';
 import { Loader } from '@googlemaps/js-api-loader';
 import * as dom from './dom';
 import { state } from './state';
-import { initMaps, onLocationError, onLocationSuccess, selectTimezone } from './map';
+import { initMaps, onLocationError, onLocationSuccess, selectTimezone, renderWorldClocks, addUniqueTimezoneToList, updateUserTimezoneDetails } from './map';
 import { updateAllClocks, getUtcOffset, syncClock, getDisplayTimezoneName, startClocks } from './time';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
@@ -33,88 +33,6 @@ function handleUrlParameters() {
     }
 }
 
-function saveTimezones() {
-    localStorage.setItem('worldClocks', JSON.stringify(state.addedTimezones));
-}
-
-function addUniqueTimezoneToList(tz: string) {
-    if (state.addedTimezones.includes(tz)) {
-        return;
-    }
-
-    const newOffset = getUtcOffset(tz);
-
-    if (state.gpsTzid && getUtcOffset(state.gpsTzid) === newOffset && tz !== state.gpsTzid) {
-        return;
-    }
-
-    state.addedTimezones = state.addedTimezones.filter(existingTz => getUtcOffset(existingTz) !== newOffset);
-    state.addedTimezones.push(tz);
-
-    saveTimezones();
-    renderWorldClocks();
-}
-
-
-function createClockElement(tz: string): HTMLElement {
-    const template = dom.worldClockTemplate;
-    const clone = template.content.cloneNode(true) as DocumentFragment;
-    const clockDiv = clone.querySelector('.grid') as HTMLElement;
-
-    clockDiv.id = `clock-${tz.replace(/\//g, '-')}`;
-
-    clockDiv.classList.remove('border-transparent', 'border-blue-500', 'border-yellow-500');
-
-    if (tz === state.gpsTzid && state.gpsTimezoneSelected) {
-        clockDiv.classList.add('border-yellow-500');
-    } else if (tz === state.gpsTzid) {
-        clockDiv.classList.add('border-blue-500');
-    } else if (tz === state.temporaryTimezone) {
-        clockDiv.classList.add('border-yellow-500');
-    } else {
-        clockDiv.classList.add('border-transparent');
-    }
-
-    if (tz === state.temporaryTimezone && !state.addedTimezones.includes(tz)) {
-        clockDiv.classList.add('bg-yellow-800', 'bg-opacity-50');
-    } else {
-        clockDiv.classList.remove('bg-yellow-800', 'bg-opacity-50');
-    }
-
-    clone.querySelector('.city')!.textContent = getDisplayTimezoneName(tz);
-    const removeBtn = clone.querySelector('.remove-btn') as HTMLElement;
-    const pinBtn = clone.querySelector('.pin-btn') as HTMLElement;
-
-    removeBtn.dataset.timezone = tz;
-    pinBtn.dataset.timezone = tz;
-
-    if (tz === state.temporaryTimezone && !state.addedTimezones.includes(tz)) {
-        removeBtn.classList.add('hidden');
-        pinBtn.classList.remove('hidden');
-    } else {
-        removeBtn.classList.remove('hidden');
-        pinBtn.classList.add('hidden');
-    }
-
-    return clockDiv;
-}
-
-function renderWorldClocks() {
-    dom.worldClocksContainerEl.innerHTML = '';
-
-    const timezonesToRender = [...state.addedTimezones];
-    if (state.temporaryTimezone && !timezonesToRender.includes(state.temporaryTimezone)) {
-        timezonesToRender.push(state.temporaryTimezone);
-    }
-
-    timezonesToRender
-        .sort((a, b) => getUtcOffset(a) - getUtcOffset(b))
-        .forEach((tz: string) => {
-            const clockElement = createClockElement(tz);
-            dom.worldClocksContainerEl.appendChild(clockElement);
-        });
-}
-
 function handleAddTimezone() {
     const newTimezone = dom.timezoneInput.value;
     const ianaTimezones = Intl.supportedValuesOf('timeZone');
@@ -140,6 +58,7 @@ async function startApp() {
   state.localTimezone = initialTimezone;
   state.gpsTzid = initialTimezone;
   state.gpsZone = getUtcOffset(initialTimezone);
+  updateUserTimezoneDetails(initialTimezone);
 
   startClocks();
   syncClock();

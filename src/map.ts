@@ -2,7 +2,7 @@
 
 import * as dom from './dom';
 import { state } from './state';
-import { fetchTimezoneForCoordinates, findTimezoneFromGeoJSON, startClocks, getTimezoneOffset, getFormattedTime, getUtcOffset, getValidTimezoneName, getDisplayTimezoneName, updateAllClocks } from './time';
+import { fetchTimezoneForCoordinates, findTimezoneFromGeoJSON, startClocks, getTimezoneOffset, getFormattedTime, getUtcOffset, getDisplayTimezoneName, getValidTimezoneName, updateAllClocks } from './time';
 import { locationMapStyles, worldTimezoneMapStyles } from './map-styles';
 import { distance, formatAccuracy } from './utils';
 
@@ -43,7 +43,7 @@ function updateCard(
   }
 }
 
-function updateUserTimezoneDetails(tzid: string) {
+export function updateUserTimezoneDetails(tzid: string) {
   const city = getDisplayTimezoneName(tzid);
   dom.userTimezoneNameEl.textContent = city;
   dom.userTimezoneDetailsEl.classList.remove('hidden');
@@ -113,7 +113,6 @@ function selectFeature(feature: google.maps.Data.Feature | null, tzidToSelect?: 
     updateMapHighlights();
     document.dispatchEvent(new CustomEvent('temporarytimezonechanged'));
 }
-
 
 export function selectTimezone(tzid: string) {
     if (!state.geoJsonLoaded || !state.timezoneMap) return;
@@ -263,7 +262,6 @@ export function updateMapHighlights() {
     if (!state.timezoneMap) return;
     state.timezoneMap.data.setStyle(feature => {
         const featureOffset = feature.getProperty('current_offset') as number;
-        const featureTzid = feature.getProperty('tz_name1st') as string;
 
         const styles = {
             default: { fillColor: 'transparent', strokeColor: 'rgba(255, 255, 255, 0.2)', strokeWeight: 1, zIndex: 1 },
@@ -282,12 +280,6 @@ export function updateMapHighlights() {
             style = { ...styles.selected };
         } else if (state.hoveredZone === featureOffset) {
             style = { ...styles.hover };
-        }
-
-        if (state.hoveredTimezoneName && state.hoveredTimezoneName === featureTzid) {
-            style.strokeColor = 'rgba(255, 255, 255, 0.4)';
-            style.strokeWeight = 1;
-            style.zIndex = 4;
         }
 
         return style;
@@ -361,6 +353,7 @@ function isGpsLocation(coords: GeolocationCoordinates): boolean {
 }
 
 export async function onLocationSuccess(pos: GeolocationPosition) {
+  console.log('Location success:', pos);
   const { coords } = pos;
   const { latitude, longitude, accuracy } = coords;
 
