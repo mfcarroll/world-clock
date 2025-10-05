@@ -347,21 +347,18 @@ export function onLocationError(error: GeolocationPositionError) {
   }
 }
 
-function isGpsLocation(coords: GeolocationCoordinates): boolean {
-  const { accuracy, altitude, speed, heading } = coords;
-  return accuracy <= 20 && altitude !== null && speed !== null && heading !== null;
-}
-
 export async function onLocationSuccess(pos: GeolocationPosition) {
-  console.log('Location success:', pos);
+  console.log('Location success:', pos.coords);
   const { coords } = pos;
-  const { latitude, longitude, accuracy } = coords;
+  const { latitude, longitude, accuracy, altitude, speed, heading } = coords;
 
-  const isGps = isGpsLocation(coords);
-  
-  dom.locationTitleEl.innerHTML = isGps
-      ? `<i class="fas fa-location-dot fa-fw mr-3 text-green-400"></i> GPS Location`
-      : `<i class="fas fa-wifi fa-fw mr-3 text-blue-400"></i> Approximate Location`;
+  if (accuracy <= 15 && (altitude !== null || speed !== null || heading !== null)) {
+    dom.locationTitleEl.innerHTML = `<i class="fas fa-satellite-dish fa-fw mr-3 text-blue-400"></i> GPS Location`;
+  } else if (accuracy <= 15) {
+    dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-3 text-blue-400"></i> Accurate Location`;
+  } else {
+    dom.locationTitleEl.innerHTML = `<i class="fas fa-wifi fa-fw mr-3 text-blue-400"></i> Approximate Location`;
+  }
   
   dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i> Accuracy: ${formatAccuracy(accuracy)}`;
   dom.accuracyDisplayEl.classList.remove('hidden');

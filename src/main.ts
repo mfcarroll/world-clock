@@ -9,9 +9,9 @@ import { updateAllClocks, getUtcOffset, syncClock, getDisplayTimezoneName, start
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { library, dom as faDom } from '@fortawesome/fontawesome-svg-core';
-import { faLocationDot, faWifi, faBullseye, faMobileAlt } from '@fortawesome/free-solid-svg-icons';
+import { faLocationDot, faWifi, faBullseye, faMobileAlt, faSatelliteDish } from '@fortawesome/free-solid-svg-icons';
 
-library.add(faLocationDot, faWifi, faBullseye, faMobileAlt);
+library.add(faLocationDot, faWifi, faBullseye, faMobileAlt, faSatelliteDish);
 faDom.watch();
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
