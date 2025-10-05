@@ -36,7 +36,7 @@ export function getDisplayTimezoneName(tz: string): string {
  * @param lon The longitude.
  * @returns The IANA timezone name if a match is found, otherwise null.
  */
-function findTimezoneFromGeoJSON(lat: number, lon: number): string | null {
+export function findTimezoneFromGeoJSON(lat: number, lon: number): string | null {
     if (!state.geoJsonData) {
         console.error("GeoJSON data not loaded, cannot perform fallback search.");
         return null;

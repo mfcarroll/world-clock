@@ -2,8 +2,9 @@
 
 import * as dom from './dom';
 import { state } from './state';
-import { fetchTimezoneForCoordinates, startClocks, getTimezoneOffset, getFormattedTime, getUtcOffset, getValidTimezoneName, getDisplayTimezoneName } from './time';
+import { fetchTimezoneForCoordinates, findTimezoneFromGeoJSON, startClocks, getTimezoneOffset, getFormattedTime, getUtcOffset, getValidTimezoneName, getDisplayTimezoneName } from './time';
 import { darkModeStyles } from './map-styles';
+import { distance } from './utils';
 
 let userTimeInterval: number | null = null;
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -231,8 +232,13 @@ export async function initMaps() {
   state.timezoneMapMarker = new Marker({ map: state.timezoneMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon });
 
   setupTimezoneMapListeners();
-  drawTrackLine();
-  drawDottedRouteLine();
+
+  /**
+   * Intentionally commented out temporary track feature, but leaving available for future use
+   */
+
+  // drawTrackLine();
+  // drawDottedRouteLine();
 }
 
 async function setupTimezoneMapListeners() {
@@ -340,8 +346,10 @@ async function loadTimezoneGeoJson() {
 function updateLocationMap(lat: number, lon: number) {
   if (state.locationMap && state.locationMarker) {
     const pos = { lat, lng: lon };
-    state.locationMap.setCenter(pos);
-    state.locationMap.setZoom(12);
+    if (!state.initialLocationSet) {
+        state.locationMap.setCenter(pos);
+        state.locationMap.setZoom(12);
+    }
     (state.locationMarker as google.maps.Marker).setPosition(pos);
   }
 }
@@ -349,7 +357,10 @@ function updateLocationMap(lat: number, lon: number) {
 function updateTimezoneMapMarker(lat: number, lon: number) {
   if (state.timezoneMap && state.timezoneMapMarker) {
     const pos = { lat, lng: lon };
-    state.timezoneMap.setCenter(pos);
+    if (!state.initialLocationSet) {
+        state.timezoneMap.setCenter(pos);
+        state.initialLocationSet = true;
+    }
     (state.timezoneMapMarker as google.maps.Marker).setPosition(pos);
   }
 }
@@ -418,24 +429,31 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   updateLocationMap(latitude, longitude);
   updateTimezoneMapMarker(latitude, longitude);
 
-  const tzid = await fetchTimezoneForCoordinates(latitude, longitude);
+  const geoJsonTz = findTimezoneFromGeoJSON(latitude, longitude);
+  const crossedBoundary = geoJsonTz !== state.localTimezone;
 
-  if (tzid && tzid !== state.localTimezone) {
-    console.log(`Timezone updated to ${tzid}`);
-    state.localTimezone = tzid;
-    state.gpsTzid = tzid;
-    
-    updateUserTimezoneDetails(tzid);
+  const dist = distance(latitude, longitude, state.lastFetchedCoords.lat, state.lastFetchedCoords.lon);
+  if (dist > 0.1 || crossedBoundary) {
+    state.lastFetchedCoords = { lat: latitude, lon: longitude };
+    const tzid = await fetchTimezoneForCoordinates(latitude, longitude);
 
-    state.gpsZone = getUtcOffset(tzid);
-    
-    updateMapHighlights();
+    if (tzid && tzid !== state.localTimezone) {
+      console.log(`Timezone updated to ${tzid}`);
+      state.localTimezone = tzid;
+      state.gpsTzid = tzid;
+      
+      updateUserTimezoneDetails(tzid);
 
-    document.dispatchEvent(new CustomEvent('gpstimezonefound', { detail: { tzid } }));
-    startClocks();
-  } else if (!state.localTimezone && tzid) {
-    state.localTimezone = tzid;
-    state.gpsTzid = tzid;
-    startClocks();
+      state.gpsZone = getUtcOffset(tzid);
+      
+      updateMapHighlights();
+
+      document.dispatchEvent(new CustomEvent('gpstimezonefound', { detail: { tzid } }));
+      startClocks();
+    } else if (!state.localTimezone && tzid) {
+      state.localTimezone = tzid;
+      state.gpsTzid = tzid;
+      startClocks();
+    }
   }
 }

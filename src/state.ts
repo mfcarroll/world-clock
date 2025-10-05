@@ -6,6 +6,7 @@ interface AppState {
     timezoneMap: google.maps.Map | null;
     locationMarker: google.maps.Marker | null;
     timezoneMapMarker: google.maps.Marker | null;
+    initialLocationSet: boolean;
 
     // GeoJSON Data
     geoJsonData: any | null;
@@ -24,10 +25,12 @@ interface AppState {
     hoveredZone: number | null;
     hoveredTimezoneName: string | null;
     selectedZone: number | null;
+    currentZoneFeature: google.maps.Data.Feature | null;
 
     // Time State
     timeOffset: number;
     clocksInterval: number | null;
+    lastFetchedCoords: { lat: number; lon: number; };
 }
 
 export const state: AppState = {
@@ -36,6 +39,7 @@ export const state: AppState = {
     timezoneMap: null,
     locationMarker: null,
     timezoneMapMarker: null,
+    initialLocationSet: false,
 
     // GeoJSON Data
     geoJsonData: null,
@@ -54,8 +58,10 @@ export const state: AppState = {
     hoveredZone: null,
     hoveredTimezoneName: null,
     selectedZone: null,
+    currentZoneFeature: null,
 
     // Time State
     timeOffset: 0,
     clocksInterval: null,
+    lastFetchedCoords: { lat: 0, lon: 0 },
 };
