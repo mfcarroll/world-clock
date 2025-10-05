@@ -19,11 +19,11 @@ export const worldTimezoneMapStyles: google.maps.MapTypeStyle[] = [
     stylers: [{ color: '#4a6078' }],
   },
   {
-    featureType: 'administrative.land_parcel',
-    stylers: [{ visibility: 'off' }],
+    featureType: 'administrative.locality',
+    stylers: [{ visibility: 'on' }],
   },
   {
-    featureType: 'administrative.locality',
+    featureType: 'administrative.land_parcel',
     stylers: [{ visibility: 'off' }],
   },
   {
@@ -31,11 +31,21 @@ export const worldTimezoneMapStyles: google.maps.MapTypeStyle[] = [
     stylers: [{ visibility: 'off' }],
   },
   {
+    featureType: 'landscape.man_made',
+    stylers: [{ visibility: 'off' }],
+  },  
+  {
     featureType: 'poi',
     stylers: [{ visibility: 'off' }],
   },
   {
     featureType: 'road',
+    elementType: 'geometry',
+    stylers: [{ color: '#4a6078' }], 
+  },
+  {
+    featureType: 'road',
+    elementType: 'labels',
     stylers: [{ visibility: 'off' }],
   },
   {

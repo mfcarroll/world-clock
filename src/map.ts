@@ -203,13 +203,13 @@ export function selectTimezone(tzid: string) {
 
 function createMyLocationButton(map: google.maps.Map) {
     const controlButton = document.createElement('button');
-    controlButton.style.backgroundColor = '#C6CEDA';
+    controlButton.style.backgroundColor = '#aaa';
     controlButton.style.border = 'none';
     controlButton.style.borderRadius = '2px';
     controlButton.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
     controlButton.style.cursor = 'pointer';
     controlButton.style.margin = '10px';
-    controlButton.style.padding = '10px';
+    controlButton.style.padding = '3px';
     controlButton.style.textAlign = 'center';
     controlButton.title = 'Click to recenter the map on your location';
     map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlButton);
@@ -393,7 +393,6 @@ function updateTimezoneMapMarker(lat: number, lon: number) {
     const pos = { lat, lng: lon };
     if (!state.initialLocationSet) {
         state.timezoneMap.setCenter(pos);
-        state.timezoneMap.setZoom(12);
         state.initialLocationSet = true;
     }
     (state.timezoneMapMarker as google.maps.Marker).setPosition(pos);
