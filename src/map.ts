@@ -9,6 +9,25 @@ import { distance, formatAccuracy } from './utils';
 let userTimeInterval: number | null = null;
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
+export function showLocationUnavailable() {
+  // Use the existing initialLocationSet flag to prevent this from running if location is already found
+  if (state.initialLocationSet) return;
+  
+  dom.locationLoader.classList.add('hidden'); // Hide the loading skeletons
+  dom.locationContent.classList.remove('hidden'); // Show the main content area
+
+  // Update the title to show the unavailable state
+  dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-3 text-red-400"></i> Location Unavailable`;
+  
+  // Set placeholder text to maintain layout
+  dom.latitudeEl.textContent = '---.----°';
+  dom.longitudeEl.textContent = '---.----°';
+  
+  // Update the accuracy display
+  dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i> Accuracy: Unknown`;
+  dom.accuracyDisplayEl.classList.remove('hidden');
+}
+
 function updateCard(
   cardEl: HTMLElement,
   nameEl: HTMLElement,
@@ -199,11 +218,6 @@ export async function initMaps() {
     center: { lat: 0, lng: 0 }
   });
 
-  dom.locationLoader.classList.add('hidden');
-  dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-3 text-red-400"></i> Location Unavailable`;
-  dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i> Accuracy: Unknown`;
-  dom.accuracyDisplayEl.classList.remove('hidden');
-
   const timezoneMapEl = document.getElementById('timezone-map') as HTMLElement;
   state.timezoneMap = new Map(timezoneMapEl, timezoneMapOptions);
   createMyLocationButton(state.timezoneMap);
@@ -348,6 +362,7 @@ function updateTimezoneMapMarker(lat: number, lon: number) {
 
 export function onLocationError(error: GeolocationPositionError) {
   console.error(`Geolocation error: ${error.message}`);
+  showLocationUnavailable();
   if (!state.localTimezone) {
     state.localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     startClocks();

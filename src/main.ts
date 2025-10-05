@@ -4,7 +4,7 @@ import './style.css';
 import { Loader } from '@googlemaps/js-api-loader';
 import * as dom from './dom';
 import { state } from './state';
-import { initMaps, onLocationError, onLocationSuccess, selectTimezone, renderWorldClocks, addUniqueTimezoneToList, updateUserTimezoneDetails } from './map';
+import { initMaps, onLocationError, onLocationSuccess, selectTimezone, renderWorldClocks, addUniqueTimezoneToList, updateUserTimezoneDetails, showLocationUnavailable } from './map';
 import { updateAllClocks, getUtcOffset, syncClock, getDisplayTimezoneName, startClocks } from './time';
 import { Capacitor } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
@@ -50,6 +50,12 @@ function handleAddTimezone() {
 async function startApp() {
   handleUrlParameters();
   
+  setTimeout(() => {
+    if (!state.initialLocationSet) {
+      showLocationUnavailable();
+    }
+  }, 2000);
+
   if (Capacitor.getPlatform() === 'ios') {
     document.body.classList.add('is-ios');
   }
@@ -63,6 +69,25 @@ async function startApp() {
   startClocks();
   syncClock();
   
+  // Start watching for location immediately.
+  if (Capacitor.isNativePlatform()) {
+    Geolocation.watchPosition({}, (position, err) => {
+      if (err) {
+        onLocationError(err as GeolocationPositionError);
+        return;
+      }
+      if (position) {
+          onLocationSuccess(position as GeolocationPosition);
+      }
+    });
+  } else {
+    navigator.geolocation.watchPosition(
+      onLocationSuccess, 
+      onLocationError
+    );
+  }
+
+  // Load maps separately. A failure here will not block location services.
   const loader = new Loader({
     apiKey: GOOGLE_MAPS_API_KEY,
     version: "weekly",
@@ -71,32 +96,10 @@ async function startApp() {
   try {
     await loader.load();
     await initMaps();
-    
-    if (Capacitor.isNativePlatform()) {
-      Geolocation.watchPosition({}, (position, err) => {
-        if (err) {
-          onLocationError(err as GeolocationPositionError);
-          return;
-        }
-        if (position) {
-            onLocationSuccess(position as GeolocationPosition);
-        }
-      });
-    } else {
-      navigator.geolocation.watchPosition(
-        onLocationSuccess, 
-        onLocationError
-      );
-    }
   } catch (e) {
-    console.error("Failed to load Google Maps or get location", e);
-    onLocationError({
-        code: 0,
-        message: "Initialization failed",
-        PERMISSION_DENIED: 1,
-        POSITION_UNAVAILABLE: 2,
-        TIMEOUT: 3
-    });
+    console.error("Failed to load Google Maps.", e);
+    // You could add UI to show the map is unavailable here if desired.
+    // The location card will function independently.
   }
 
   const ianaTimezones = Intl.supportedValuesOf('timeZone');

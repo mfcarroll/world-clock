@@ -8,7 +8,6 @@ export const locationLoader = document.getElementById('location-loader')!;
 export const locationContent = document.getElementById('location-content')!;
 export const latitudeEl = document.getElementById('latitude')!;
 export const longitudeEl = document.getElementById('longitude')!;
-export const locationErrorEl = document.getElementById('location-error')!;
 export const locationTitleEl = document.getElementById('location-title')!;
 export const accuracyDisplayEl = document.getElementById('accuracy-display')!;
 
