@@ -193,6 +193,7 @@ async function startApp() {
         }
       });
     } else {
+      console.log("Attempting to monitor location...");
       navigator.geolocation.watchPosition(onLocationSuccess, onLocationError);
     }
   } catch (e) {
