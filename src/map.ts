@@ -201,6 +201,30 @@ export function selectTimezone(tzid: string) {
     selectFeature(feature, tzid);
 }
 
+function createMyLocationButton(map: google.maps.Map) {
+    const controlButton = document.createElement('button');
+    controlButton.style.backgroundColor = '#C6CEDA';
+    controlButton.style.border = 'none';
+    controlButton.style.borderRadius = '2px';
+    controlButton.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+    controlButton.style.cursor = 'pointer';
+    controlButton.style.margin = '10px';
+    controlButton.style.padding = '5px';
+    controlButton.style.textAlign = 'center';
+    controlButton.title = 'Click to recenter the map on your location';
+    map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlButton);
+
+    const controlText = document.createElement('div');
+    controlText.innerHTML = '<img src="/current-location.svg" width="24" height="24"/>';
+    controlButton.appendChild(controlText);
+
+    controlButton.addEventListener('click', () => {
+        if (state.lastFetchedCoords) {
+            map.setCenter({ lat: state.lastFetchedCoords.lat, lng: state.lastFetchedCoords.lon });
+        }
+    });
+}
+
 export async function initMaps() {
   const { Map, Polyline } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
   const { Marker } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
@@ -215,6 +239,7 @@ export async function initMaps() {
 
   const locationMapEl = document.getElementById('location-map') as HTMLElement;
   state.locationMap = new Map(locationMapEl, mapOptions);
+  createMyLocationButton(state.locationMap);
   
   const blueDotIcon: google.maps.Symbol = {
       path: google.maps.SymbolPath.CIRCLE,
@@ -229,6 +254,7 @@ export async function initMaps() {
 
   const timezoneMapEl = document.getElementById('timezone-map') as HTMLElement;
   state.timezoneMap = new Map(timezoneMapEl, mapOptions);
+  createMyLocationButton(state.timezoneMap);
   state.timezoneMapMarker = new Marker({ map: state.timezoneMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon });
 
   setupTimezoneMapListeners();
@@ -359,6 +385,7 @@ function updateTimezoneMapMarker(lat: number, lon: number) {
     const pos = { lat, lng: lon };
     if (!state.initialLocationSet) {
         state.timezoneMap.setCenter(pos);
+        state.timezoneMap.setZoom(12);
         state.initialLocationSet = true;
     }
     (state.timezoneMapMarker as google.maps.Marker).setPosition(pos);
