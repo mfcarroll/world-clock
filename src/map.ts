@@ -422,7 +422,7 @@ export function onLocationError(error: GeolocationPositionError) {
   console.error(`Geolocation error: ${error.message}`);
   
   dom.locationTitleEl.innerHTML = `
-    <i class="fas fa-location-pin fa-fw mr-3 text-red-400"></i>
+    <i class="fas fa-location-dot fa-fw mr-3 text-red-400"></i>
     Location Unavailable
   `;
   
@@ -444,22 +444,12 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   const isGps = isGpsLocation(coords);
   
   dom.locationTitleEl.innerHTML = isGps
-      ? `<i class="fas fa-location-pin fa-fw mr-3 text-green-400"></i> GPS Location`
+      ? `<i class="fas fa-location-dot fa-fw mr-3 text-green-400"></i> GPS Location`
       : `<i class="fas fa-wifi fa-fw mr-3 text-blue-400"></i> Approximate Location`;
   
   dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i> Accuracy: ${formatAccuracy(accuracy)}`;
   dom.accuracyDisplayEl.classList.remove('hidden');
 
-  const formatCoordinate = (value: number, padding: number): string => {
-    const [integer, fractional] = value.toFixed(4).split('.');
-    return `${integer.padStart(padding, '\u00A0')}.${fractional}°`;
-  };
-
-  dom.latitudeEl.textContent = formatCoordinate(latitude, 4);
-  dom.longitudeEl.textContent = formatCoordinate(longitude, 4);
-  
-  dom.locationLoader.classList.add('hidden');
-  dom.locationContent.classList.remove('hidden');
 
   updateLocationMap(latitude, longitude, accuracy);
   updateTimezoneMapMarker(latitude, longitude);
