@@ -5,9 +5,14 @@ import { Loader } from '@googlemaps/js-api-loader';
 import * as dom from './dom';
 import { state } from './state';
 import { initMaps, onLocationError, onLocationSuccess, selectTimezone } from './map';
-import { updateAllClocks, getUtcOffset, syncClock, getDisplayTimezoneName } from './time';
+import { updateAllClocks, getUtcOffset, syncClock, getDisplayTimezoneName, startClocks } from './time';
 import { Capacitor } from '@capacitor/core';
-import { Geolocation, Position } from '@capacitor/geolocation';
+import { Geolocation } from '@capacitor/geolocation';
+import { library, dom as faDom } from '@fortawesome/fontawesome-svg-core';
+import { faLocationPin, faWifi, faBullseye, faMobileAlt } from '@fortawesome/free-solid-svg-icons';
+
+library.add(faLocationPin, faWifi, faBullseye, faMobileAlt);
+faDom.watch();
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
@@ -139,7 +144,11 @@ async function startApp() {
     console.log('iOS platform not detected.');
   }
 
-  await syncClock();
+  // Start clocks immediately with device time
+  startClocks();
+
+  // Asynchronously synchronize the clock
+  syncClock();
   
   const loader = new Loader({
     apiKey: GOOGLE_MAPS_API_KEY,
@@ -150,68 +159,30 @@ async function startApp() {
     await loader.load();
     await initMaps();
     
-    const locationOptions = { timeout: 10000, maximumAge: 60000 };
-
     if (Capacitor.isNativePlatform()) {
       Geolocation.watchPosition({}, (position, err) => {
         if (err) {
-          onLocationError(err);
+          onLocationError(err as GeolocationPositionError);
           return;
         }
         if (position) {
-            const compatiblePosition: GeolocationPosition = {
-                coords: {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy,
-                    altitude: position.coords.altitude,
-                    altitudeAccuracy: position.coords.altitudeAccuracy ?? null,
-                    heading: position.coords.heading ?? null,
-                    speed: position.coords.speed ?? null,
-                    toJSON: () => ({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        accuracy: position.coords.accuracy,
-                        altitude: position.coords.altitude,
-                        altitudeAccuracy: position.coords.altitudeAccuracy ?? null,
-                        heading: position.coords.heading ?? null,
-                        speed: position.coords.speed ?? null,
-                    }),
-                },
-                timestamp: position.timestamp,
-                toJSON: () => ({
-                    coords: {
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                        accuracy: position.coords.accuracy,
-                        altitude: position.coords.altitude,
-                        altitudeAccuracy: position.coords.altitudeAccuracy ?? null,
-                        heading: position.coords.heading ?? null,
-                        speed: position.coords.speed ?? null,
-                    },
-                    timestamp: position.timestamp,
-                }),
-            };
-            onLocationSuccess(compatiblePosition);
+            onLocationSuccess(position as GeolocationPosition);
         }
       });
     } else {
       navigator.geolocation.watchPosition(
-        onLocationSuccess,
-        (err) => {
-          onLocationError(err);
-        },
-        locationOptions
+        onLocationSuccess, 
+        onLocationError
       );
     }
   } catch (e) {
     console.error("Failed to load Google Maps or get location", e);
     onLocationError({
-      code: 0,
-      message: "Initialization failed",
-      PERMISSION_DENIED: 1,
-      POSITION_UNAVAILABLE: 2,
-      TIMEOUT: 3
+        code: 0,
+        message: "Initialization failed",
+        PERMISSION_DENIED: 1,
+        POSITION_UNAVAILABLE: 2,
+        TIMEOUT: 3
     });
   }
 

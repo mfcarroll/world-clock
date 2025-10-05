@@ -105,23 +105,6 @@ export async function syncClock() {
     
     console.log(`Clock synchronized. Device offset is ${state.timeOffset}ms.`);
 
-    // Re-check if the offset is small
-    if (Math.abs(state.timeOffset) < 5000) {
-      setTimeout(async () => {
-        const subsequentResponse = await fetch(GCF_URL);
-        const subsequentData = await subsequentResponse.json();
-        const newServerTime = new Date(subsequentData.dateTime).getTime();
-        const newLocalTime = new Date().getTime();
-        let newOffset = newServerTime - newLocalTime;
-
-        if (Math.abs(newOffset) < 500) {
-          newOffset = 0;
-        }
-        state.timeOffset = newOffset;
-        console.log(`Re-checked clock sync. New offset is ${state.timeOffset}ms.`);
-      }, 5000); // Re-check after 5 seconds
-    }
-
   } catch (error) {
     console.error('Could not synchronize clock:', error);
     state.timeOffset = 0;
@@ -130,20 +113,19 @@ export async function syncClock() {
 
 export function updateAllClocks() {
   const correctedTime = new Date(new Date().getTime() + state.timeOffset);
-  const localTimezone = state.localTimezone;
-  if (localTimezone) {
-    try {
-      dom.localTimeEl.textContent = correctedTime.toLocaleTimeString('en-US', { 
-        timeZone: localTimezone,
-        hour: 'numeric',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-      dom.localDateEl.textContent = correctedTime.toLocaleDateString('en-US', { timeZone: localTimezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      dom.localTimezoneEl.textContent = getDisplayTimezoneName(localTimezone);
-    } catch (e) {
-      dom.localTimeEl.textContent = "Error";
-    }
+  const localTimezone = state.localTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  
+  try {
+    dom.localTimeEl.textContent = correctedTime.toLocaleTimeString('en-US', { 
+      timeZone: localTimezone,
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    dom.localDateEl.textContent = correctedTime.toLocaleDateString('en-US', { timeZone: localTimezone, weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    dom.localTimezoneEl.textContent = getDisplayTimezoneName(localTimezone);
+  } catch (e) {
+    dom.localTimeEl.textContent = "Error";
   }
 
   const timezonesToRender = [...state.addedTimezones];
@@ -179,7 +161,7 @@ export function updateAllClocks() {
     minute: '2-digit',
     second: '2-digit'
   });
-  dom.deviceTimezoneEl.textContent = deviceTz.replace(/_/g, ' ');
+  dom.deviceTimezoneEl.textContent = getDisplayTimezoneName(deviceTz);
 
   dom.timeLoader.classList.add('hidden');
   dom.timeContent.classList.remove('hidden');

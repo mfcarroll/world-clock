@@ -28,22 +28,26 @@
               <div class="h-6 bg-gray-700 rounded w-2/3 mx-auto skeleton mt-4"></div>
             </div>
             <div id="time-content" class="hidden">
-              <h2 class="text-xl font-semibold text-white mb-2 flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-green-400"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>GPS Time</h2>
+              <h2 class="text-xl font-semibold text-white mb-2 flex items-center justify-center">
+                <i class="fas fa-location-dot fa-fw mr-2 text-green-400"></i>
+                Local Time
+              </h2>
               <p id="local-time" class="text-4xl font-bold text-white tracking-wider font-mono">--:--:--</p>
               <p id="local-timezone" class="text-lg text-gray-400 mt-1">-- / --</p>
               <p id="local-date" class="text-md text-gray-400">---, --- --, ----</p>
               <hr class="border-gray-600 my-4">
-              <h2 class="text-xl font-semibold text-white mb-2 flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-purple-400"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>Device Time</h2>
+              <h2 class="text-xl font-semibold text-white mb-2 flex items-center justify-center">
+                <i class="fas fa-mobile-alt fa-fw mr-2 text-purple-400"></i>
+                Device Time
+              </h2>
               <p id="device-time" class="text-3xl font-medium text-gray-300 font-mono">--:--:--</p>
               <p id="device-timezone" class="text-md text-gray-500">-- / --</p>
             </div>
           </div>
           
           <div id="location-card" class="card rounded-2xl shadow-lg p-6">
-            <h2 class="text-xl font-semibold text-white mb-4 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-3 text-blue-400"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              Your Location
-            </h2>
+            <h2 id="location-title" class="text-xl font-semibold text-white mb-4 flex items-center justify-center">
+              </h2>
             <div id="location-loader" class="space-y-3">
               <div class="h-4 bg-gray-700 rounded w-3/4 skeleton"></div>
               <div class="h-4 bg-gray-700 rounded w-1/2 skeleton"></div>
@@ -56,7 +60,7 @@
                 <p id="location-error" class="text-red-400 hidden"></p>
               </div>
             </div>
-            <p id="location-source" class="text-sm text-gray-400 mb-4 flex items-center"></p>
+            <p id="accuracy-display" class="text-center text-gray-400 mt-2 hidden"></p>
           </div>
           <div class="card rounded-2xl shadow-lg overflow-hidden aspect-w-1 aspect-h-1">
             <div id="location-map" class="bg-gray-700 w-full h-64 flex items-center justify-center text-gray-400">

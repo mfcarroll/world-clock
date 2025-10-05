@@ -4,7 +4,7 @@ import * as dom from './dom';
 import { state } from './state';
 import { fetchTimezoneForCoordinates, findTimezoneFromGeoJSON, startClocks, getTimezoneOffset, getFormattedTime, getUtcOffset, getValidTimezoneName, getDisplayTimezoneName } from './time';
 import { locationMapStyles, worldTimezoneMapStyles } from './map-styles';
-import { distance } from './utils';
+import { distance, formatAccuracy } from './utils';
 
 let userTimeInterval: number | null = null;
 const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -228,6 +228,8 @@ function createMyLocationButton(map: google.maps.Map) {
 export async function initMaps() {
   const { Map } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
   const { Marker } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
+  const { Circle } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
+
 
   const locationMapOptions: google.maps.MapOptions = {
     center: { lat: 0, lng: 0 },
@@ -258,14 +260,22 @@ export async function initMaps() {
       strokeWeight: 2,
   };
 
-  state.locationMarker = new Marker({ map: state.locationMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon });
-  state.locationMarker.setVisible(false);
+  state.locationMarker = new Marker({ map: state.locationMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon, visible: false });
+  state.accuracyCircle = new Circle({
+    map: state.locationMap,
+    radius: 0,
+    fillColor: '#4285F4',
+    fillOpacity: 0.2,
+    strokeColor: '#4285F4',
+    strokeOpacity: 0.5,
+    strokeWeight: 1,
+    center: { lat: 0, lng: 0 }
+  });
 
   const timezoneMapEl = document.getElementById('timezone-map') as HTMLElement;
   state.timezoneMap = new Map(timezoneMapEl, timezoneMapOptions);
   createMyLocationButton(state.timezoneMap);
-  state.timezoneMapMarker = new Marker({ map: state.timezoneMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon });
-  state.timezoneMapMarker.setVisible(false);
+  state.timezoneMapMarker = new Marker({ map: state.timezoneMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon, visible: false });
 
   setupTimezoneMapListeners();
 
@@ -380,17 +390,21 @@ async function loadTimezoneGeoJson() {
   }
 }
 
-function updateLocationMap(lat: number, lon: number) {
-  if (state.locationMap && state.locationMarker) {
-    const pos = { lat, lng: lon };
-    if (!state.initialLocationSet) {
-        state.locationMap.setCenter(pos);
-        state.locationMap.setZoom(12);
+function updateLocationMap(lat: number, lon: number, accuracy: number) {
+    if (state.locationMap && state.locationMarker) {
+        const pos = { lat, lng: lon };
+        if (!state.initialLocationSet) {
+            state.locationMap.setCenter(pos);
+            state.locationMap.setZoom(12);
+        }
+        state.locationMarker.setPosition(pos);
+        state.locationMarker.setVisible(true);
+
+        state.accuracyCircle!.setCenter(pos);
+        state.accuracyCircle!.setRadius(accuracy);
     }
-    (state.locationMarker as google.maps.Marker).setPosition(pos);
-    (state.locationMarker as google.maps.Marker).setVisible(true);
-  }
 }
+
 
 function updateTimezoneMapMarker(lat: number, lon: number) {
   if (state.timezoneMap && state.timezoneMapMarker) {
@@ -399,54 +413,42 @@ function updateTimezoneMapMarker(lat: number, lon: number) {
         state.timezoneMap.setCenter(pos);
         state.initialLocationSet = true;
     }
-    (state.timezoneMapMarker as google.maps.Marker).setPosition(pos);
-    (state.timezoneMapMarker as google.maps.Marker).setVisible(true);
+    state.timezoneMapMarker.setPosition(pos);
+    state.timezoneMapMarker.setVisible(true);
   }
 }
 
 export function onLocationError(error: GeolocationPositionError) {
   console.error(`Geolocation error: ${error.message}`);
+  
+  dom.locationTitleEl.innerHTML = `
+    <i class="fas fa-location-pin fa-fw mr-3 text-red-400"></i>
+    Location Unavailable
+  `;
+  
   if (!state.localTimezone) {
-    state.localTimezone = 'Etc/UTC';
+    state.localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     startClocks();
   }
 }
 
 function isGpsLocation(coords: GeolocationCoordinates): boolean {
   const { accuracy, altitude, speed, heading } = coords;
-  return accuracy <= 15 && altitude !== null && speed !== null && heading !== null;
-}
-
-function getGpsDeterminationRationale(coords: GeolocationCoordinates): string {
-    const { accuracy, altitude, speed, heading } = coords;
-    const reasons: string[] = [];
-
-    if (accuracy > 15) {
-        reasons.push(`inaccurate (accuracy is ${accuracy.toFixed(1)}m)`);
-    }
-    if (altitude === null) {
-        reasons.push('altitude not available');
-    }
-    if (speed === null) {
-        reasons.push('speed not available');
-    }
-    if (heading === null) {
-        reasons.push('heading not available');
-    }
-
-    if (reasons.length === 0) {
-        return 'GPS Determination: Success, location is considered genuine GPS.';
-    } else {
-        return `GPS Determination: Failed, location is considered approximate. Reason(s): ${reasons.join(', ')}.`;
-    }
+  return accuracy <= 20 && altitude !== null && speed !== null && heading !== null;
 }
 
 export async function onLocationSuccess(pos: GeolocationPosition) {
   const { coords } = pos;
-  const { latitude, longitude, altitude, altitudeAccuracy, heading, speed, accuracy } = coords;
+  const { latitude, longitude, accuracy } = coords;
+
+  const isGps = isGpsLocation(coords);
   
-  console.log('Location data:', JSON.stringify({ latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed }, null, 2));
-  console.log(getGpsDeterminationRationale(coords));
+  dom.locationTitleEl.innerHTML = isGps
+      ? `<i class="fas fa-location-pin fa-fw mr-3 text-green-400"></i> GPS Location`
+      : `<i class="fas fa-wifi fa-fw mr-3 text-blue-400"></i> Approximate Location`;
+  
+  dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i> Accuracy: ${formatAccuracy(accuracy)}`;
+  dom.accuracyDisplayEl.classList.remove('hidden');
 
   const formatCoordinate = (value: number, padding: number): string => {
     const [integer, fractional] = value.toFixed(4).split('.');
@@ -456,16 +458,10 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   dom.latitudeEl.textContent = formatCoordinate(latitude, 4);
   dom.longitudeEl.textContent = formatCoordinate(longitude, 4);
   
-  const isGps = isGpsLocation(coords);
-  dom.locationSourceEl.innerHTML = isGps
-      ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-green-400"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> GPS Location`
-      : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2 text-blue-400"><path d="M5 12.55a11 11 0 0 1 14 0"></path><path d="M2 8.82a15 15 0 0 1 20 0"></path><path d="M9.17 16.24a5 5 0 0 1 5.66 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg> Approximate Location`;
-
-
   dom.locationLoader.classList.add('hidden');
   dom.locationContent.classList.remove('hidden');
 
-  updateLocationMap(latitude, longitude);
+  updateLocationMap(latitude, longitude, accuracy);
   updateTimezoneMapMarker(latitude, longitude);
 
   const geoJsonTz = findTimezoneFromGeoJSON(latitude, longitude);
@@ -488,11 +484,6 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
       updateMapHighlights();
 
       document.dispatchEvent(new CustomEvent('gpstimezonefound', { detail: { tzid } }));
-      startClocks();
-    } else if (!state.localTimezone && tzid) {
-      state.localTimezone = tzid;
-      state.gpsTzid = tzid;
-      startClocks();
     }
   }
 }
