@@ -24,3 +24,11 @@
 .timezone-detail-card {
   @apply p-3 rounded-lg border-2 bg-gray-900/80;
 }
+
+/*
+  Add padding to the top of the app container to avoid the
+  Dynamic Island/notch on native iOS devices.
+*/
+.is-ios #app-container {
+  margin-top: env(safe-area-inset-top);
+}

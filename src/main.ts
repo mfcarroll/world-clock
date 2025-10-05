@@ -6,6 +6,8 @@ import * as dom from './dom';
 import { state } from './state';
 import { initMaps, onLocationError, onLocationSuccess, selectTimezone } from './map';
 import { updateAllClocks, getUtcOffset, syncClock, getDisplayTimezoneName } from './time';
+import { Capacitor } from '@capacitor/core';
+import { Geolocation, Position } from '@capacitor/geolocation';
 
 const GOOGLE_MAPS_API_KEY = "AIzaSyAmfnxthlRCjJNKNQTvp6RX-0pTQPL2cB0";
 
@@ -128,6 +130,14 @@ function handleAddTimezone() {
 
 async function startApp() {
   handleUrlParameters();
+  
+// Detect iOS for layout of native app
+  if (Capacitor.getPlatform() === 'ios') {
+    console.log('iOS platform detected. Adding .is-ios class to body.');
+    document.body.classList.add('is-ios');
+  } else {
+    console.log('iOS platform not detected.');
+  }
 
   await syncClock();
   
@@ -139,7 +149,52 @@ async function startApp() {
   try {
     await loader.load();
     await initMaps();
-    navigator.geolocation.watchPosition(onLocationSuccess, onLocationError);
+    if (Capacitor.isNativePlatform()) {
+      Geolocation.watchPosition({}, (position, err) => {
+        if (err) {
+          onLocationError(err);
+          return;
+        }
+        if (position) {
+            const compatiblePosition: GeolocationPosition = {
+                coords: {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy,
+                    altitude: position.coords.altitude,
+                    altitudeAccuracy: position.coords.altitudeAccuracy ?? null,
+                    heading: position.coords.heading ?? null,
+                    speed: position.coords.speed ?? null,
+                    toJSON: () => ({
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        altitude: position.coords.altitude,
+                        altitudeAccuracy: position.coords.altitudeAccuracy ?? null,
+                        heading: position.coords.heading ?? null,
+                        speed: position.coords.speed ?? null,
+                    }),
+                },
+                timestamp: position.timestamp,
+                toJSON: () => ({
+                    coords: {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        altitude: position.coords.altitude,
+                        altitudeAccuracy: position.coords.altitudeAccuracy ?? null,
+                        heading: position.coords.heading ?? null,
+                        speed: position.coords.speed ?? null,
+                    },
+                    timestamp: position.timestamp,
+                }),
+            };
+            onLocationSuccess(compatiblePosition);
+        }
+      });
+    } else {
+      navigator.geolocation.watchPosition(onLocationSuccess, onLocationError);
+    }
   } catch (e) {
     console.error("Failed to load Google Maps", e);
   }
