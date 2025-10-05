@@ -226,7 +226,7 @@ function createMyLocationButton(map: google.maps.Map) {
 }
 
 export async function initMaps() {
-  const { Map, Polyline } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
+  const { Map } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
   const { Marker } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
 
   const locationMapOptions: google.maps.MapOptions = {
@@ -259,11 +259,13 @@ export async function initMaps() {
   };
 
   state.locationMarker = new Marker({ map: state.locationMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon });
+  state.locationMarker.setVisible(false);
 
   const timezoneMapEl = document.getElementById('timezone-map') as HTMLElement;
   state.timezoneMap = new Map(timezoneMapEl, timezoneMapOptions);
   createMyLocationButton(state.timezoneMap);
   state.timezoneMapMarker = new Marker({ map: state.timezoneMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon });
+  state.timezoneMapMarker.setVisible(false);
 
   setupTimezoneMapListeners();
 
@@ -280,6 +282,7 @@ async function setupTimezoneMapListeners() {
   await loadTimezoneGeoJson();
 
   state.timezoneMap.data.addGeoJson(state.geoJsonData);
+  updateMapHighlights();
   
   state.timezoneMap.data.addListener('mouseover', (event: google.maps.Data.MouseEvent) => {
     if (isTouchDevice) return;
@@ -385,6 +388,7 @@ function updateLocationMap(lat: number, lon: number) {
         state.locationMap.setZoom(12);
     }
     (state.locationMarker as google.maps.Marker).setPosition(pos);
+    (state.locationMarker as google.maps.Marker).setVisible(true);
   }
 }
 
@@ -396,6 +400,7 @@ function updateTimezoneMapMarker(lat: number, lon: number) {
         state.initialLocationSet = true;
     }
     (state.timezoneMapMarker as google.maps.Marker).setPosition(pos);
+    (state.timezoneMapMarker as google.maps.Marker).setVisible(true);
   }
 }
 

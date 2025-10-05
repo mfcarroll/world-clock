@@ -131,7 +131,7 @@ function handleAddTimezone() {
 async function startApp() {
   handleUrlParameters();
   
-// Detect iOS for layout of native app
+  // Detect iOS for layout of native app
   if (Capacitor.getPlatform() === 'ios') {
     console.log('iOS platform detected. Adding .is-ios class to body.');
     document.body.classList.add('is-ios');
@@ -149,6 +149,9 @@ async function startApp() {
   try {
     await loader.load();
     await initMaps();
+    
+    const locationOptions = { timeout: 10000, maximumAge: 60000 };
+
     if (Capacitor.isNativePlatform()) {
       Geolocation.watchPosition({}, (position, err) => {
         if (err) {
@@ -193,11 +196,23 @@ async function startApp() {
         }
       });
     } else {
-      console.log("Attempting to monitor location...");
-      navigator.geolocation.watchPosition(onLocationSuccess, onLocationError);
+      navigator.geolocation.watchPosition(
+        onLocationSuccess,
+        (err) => {
+          onLocationError(err);
+        },
+        locationOptions
+      );
     }
   } catch (e) {
-    console.error("Failed to load Google Maps", e);
+    console.error("Failed to load Google Maps or get location", e);
+    onLocationError({
+      code: 0,
+      message: "Initialization failed",
+      PERMISSION_DENIED: 1,
+      POSITION_UNAVAILABLE: 2,
+      TIMEOUT: 3
+    });
   }
 
   const ianaTimezones = Intl.supportedValuesOf('timeZone');

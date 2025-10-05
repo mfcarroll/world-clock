@@ -84,7 +84,7 @@ export function getFormattedTime(tz: string, options: Intl.DateTimeFormatOptions
 }
 
 export async function syncClock() {
-  console.log('Performing initial clock synchronization with Google Cloud Function...');
+  console.log('Performing initial clock synchronization...');
   try {
     const GCF_URL = 'https://get-utc-time-100547663673.us-west1.run.app/';
     
@@ -95,11 +95,35 @@ export async function syncClock() {
     const serverUtcTime = new Date(data.dateTime).getTime();
     const localDeviceTime = new Date().getTime();
     
-    state.timeOffset = serverUtcTime - localDeviceTime;
+    let offset = serverUtcTime - localDeviceTime;
+
+    if (Math.abs(offset) < 500) { // If offset is less than 0.5s, assume it's latency
+      offset = 0;
+    }
+    
+    state.timeOffset = offset;
     
     console.log(`Clock synchronized. Device offset is ${state.timeOffset}ms.`);
+
+    // Re-check if the offset is small
+    if (Math.abs(state.timeOffset) < 5000) {
+      setTimeout(async () => {
+        const subsequentResponse = await fetch(GCF_URL);
+        const subsequentData = await subsequentResponse.json();
+        const newServerTime = new Date(subsequentData.dateTime).getTime();
+        const newLocalTime = new Date().getTime();
+        let newOffset = newServerTime - newLocalTime;
+
+        if (Math.abs(newOffset) < 500) {
+          newOffset = 0;
+        }
+        state.timeOffset = newOffset;
+        console.log(`Re-checked clock sync. New offset is ${state.timeOffset}ms.`);
+      }, 5000); // Re-check after 5 seconds
+    }
+
   } catch (error) {
-    console.error('Could not synchronize clock with Google Cloud Function:', error);
+    console.error('Could not synchronize clock:', error);
     state.timeOffset = 0;
   }
 }
