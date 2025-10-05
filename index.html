@@ -45,24 +45,24 @@
             </div>
           </div>
           
-          <div id="location-card" class="card rounded-2xl shadow-lg p-6">
-            <h2 id="location-title" class="text-xl font-semibold text-white mb-4 flex items-center justify-center">
-              </h2>
-            <div id="location-loader" class="space-y-3">
-              <div class="h-4 bg-gray-700 rounded w-3/4 skeleton"></div>
-              <div class="h-4 bg-gray-700 rounded w-1/2 skeleton"></div>
-              <div class="h-4 bg-gray-700 rounded w-5/6 skeleton"></div>
-            </div>
-            <div class="flex justify-center">
-              <div id="location-content" class="hidden col-span-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-lg">
-                <strong>Lat:</strong> <span id="latitude" class="font-mono">--</span>
-                <strong>Lon:</strong> <span id="longitude" class="font-mono">--</span>
-                <p id="location-error" class="text-red-400 hidden"></p>
+          <div class="card rounded-2xl shadow-lg overflow-hidden">
+            <div class="p-6">
+              <h2 id="location-title" class="text-xl font-semibold text-white mb-4 flex items-center justify-center">
+                </h2>
+              <div id="location-loader" class="space-y-3">
+                <div class="h-4 bg-gray-700 rounded w-3/4 skeleton"></div>
+                <div class="h-4 bg-gray-700 rounded w-1/2 skeleton"></div>
+                <div class="h-4 bg-gray-700 rounded w-5/6 skeleton"></div>
               </div>
+              <div class="flex justify-center">
+                <div id="location-content" class="col-span-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-lg">
+                  <strong>Lat:</strong> <span id="latitude" class="font-mono">--</span>
+                  <strong>Lon:</strong> <span id="longitude" class="font-mono">--</span>
+                  <p id="location-error" class="text-red-400 hidden"></p>
+                </div>
+              </div>
+              <p id="accuracy-display" class="text-center text-gray-400 mt-2 hidden"></p>
             </div>
-            <p id="accuracy-display" class="text-center text-gray-400 mt-2 hidden"></p>
-          </div>
-          <div class="card rounded-2xl shadow-lg overflow-hidden aspect-w-1 aspect-h-1">
             <div id="location-map" class="bg-gray-700 w-full h-64 flex items-center justify-center text-gray-400">
               <span>Initializing Map...</span>
             </div>

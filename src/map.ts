@@ -450,6 +450,16 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i> Accuracy: ${formatAccuracy(accuracy)}`;
   dom.accuracyDisplayEl.classList.remove('hidden');
 
+  const formatCoordinate = (value: number, padding: number): string => {
+    const [integer, fractional] = value.toFixed(4).split('.');
+    return `${integer.padStart(padding, '\u00A0')}.${fractional}°`;
+  };
+
+  dom.latitudeEl.textContent = formatCoordinate(latitude, 4);
+  dom.longitudeEl.textContent = formatCoordinate(longitude, 4);
+  
+  dom.locationLoader.classList.add('hidden');
+  dom.locationContent.classList.remove('hidden');
 
   updateLocationMap(latitude, longitude, accuracy);
   updateTimezoneMapMarker(latitude, longitude);
