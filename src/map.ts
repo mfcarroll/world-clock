@@ -3,7 +3,7 @@
 import * as dom from './dom';
 import { state } from './state';
 import { fetchTimezoneForCoordinates, findTimezoneFromGeoJSON, startClocks, getTimezoneOffset, getFormattedTime, getUtcOffset, getValidTimezoneName, getDisplayTimezoneName } from './time';
-import { darkModeStyles } from './map-styles';
+import { locationMapStyles, worldTimezoneMapStyles } from './map-styles';
 import { distance } from './utils';
 
 let userTimeInterval: number | null = null;
@@ -209,7 +209,7 @@ function createMyLocationButton(map: google.maps.Map) {
     controlButton.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
     controlButton.style.cursor = 'pointer';
     controlButton.style.margin = '10px';
-    controlButton.style.padding = '5px';
+    controlButton.style.padding = '10px';
     controlButton.style.textAlign = 'center';
     controlButton.title = 'Click to recenter the map on your location';
     map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlButton);
@@ -229,16 +229,24 @@ export async function initMaps() {
   const { Map, Polyline } = await google.maps.importLibrary("maps") as google.maps.MapsLibrary;
   const { Marker } = await google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
 
-  const mapOptions: google.maps.MapOptions = {
+  const locationMapOptions: google.maps.MapOptions = {
     center: { lat: 0, lng: 0 },
     zoom: 2,
-    styles: darkModeStyles,
+    styles: locationMapStyles,
+    disableDefaultUI: true,
+    zoomControl: false,
+  };
+
+  const timezoneMapOptions: google.maps.MapOptions = {
+    center: { lat: 0, lng: 0 },
+    zoom: 2,
+    styles: worldTimezoneMapStyles,
     disableDefaultUI: true,
     zoomControl: false,
   };
 
   const locationMapEl = document.getElementById('location-map') as HTMLElement;
-  state.locationMap = new Map(locationMapEl, mapOptions);
+  state.locationMap = new Map(locationMapEl, locationMapOptions);
   createMyLocationButton(state.locationMap);
   
   const blueDotIcon: google.maps.Symbol = {
@@ -253,7 +261,7 @@ export async function initMaps() {
   state.locationMarker = new Marker({ map: state.locationMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon });
 
   const timezoneMapEl = document.getElementById('timezone-map') as HTMLElement;
-  state.timezoneMap = new Map(timezoneMapEl, mapOptions);
+  state.timezoneMap = new Map(timezoneMapEl, timezoneMapOptions);
   createMyLocationButton(state.timezoneMap);
   state.timezoneMapMarker = new Marker({ map: state.timezoneMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon });
 

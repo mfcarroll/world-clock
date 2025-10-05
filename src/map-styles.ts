@@ -1,10 +1,9 @@
 // src/map-styles.ts
 
-// A refined dark mode style with a higher contrast between land and water.
-export const darkModeStyles: google.maps.MapTypeStyle[] = [
+export const worldTimezoneMapStyles: google.maps.MapTypeStyle[] = [
   {
     elementType: 'geometry',
-    stylers: [{ color: '#3b4a5a' }], // UPDATED: Lighter, warmer slate for land
+    stylers: [{ color: '#3b4a5a' }],
   },
   {
     elementType: 'labels.text.fill',
@@ -12,7 +11,7 @@ export const darkModeStyles: google.maps.MapTypeStyle[] = [
   },
   {
     elementType: 'labels.text.stroke',
-    stylers: [{ color: '#3b4a5a' }], // UPDATED: Match new land color
+    stylers: [{ color: '#3b4a5a' }],
   },
   {
     featureType: 'administrative',
@@ -21,33 +20,60 @@ export const darkModeStyles: google.maps.MapTypeStyle[] = [
   },
   {
     featureType: 'administrative.land_parcel',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#64779e' }],
+    stylers: [{ visibility: 'off' }],
   },
   {
     featureType: 'administrative.locality',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#d59563' }],
+    stylers: [{ visibility: 'off' }],
+  },
+  {
+    featureType: 'administrative.neighborhood',
+    stylers: [{ visibility: 'off' }],
   },
   {
     featureType: 'poi',
+    stylers: [{ visibility: 'off' }],
+  },
+  {
+    featureType: 'road',
+    stylers: [{ visibility: 'off' }],
+  },
+  {
+    featureType: 'transit',
+    stylers: [{ visibility: 'off' }],
+  },
+  {
+    featureType: 'water',
     elementType: 'geometry',
-    stylers: [{ color: '#3f5164' }],
+    stylers: [{ color: '#1d2c3a' }], 
+  },
+];
+
+export const locationMapStyles: google.maps.MapTypeStyle[] = [
+  {
+    elementType: 'geometry',
+    stylers: [{ color: '#3b4a5a' }],
+  },
+  {
+    elementType: 'labels.text.fill',
+    stylers: [{ color: '#8a99a8' }], 
+  },
+  {
+    elementType: 'labels.text.stroke',
+    stylers: [{ color: '#3b4a5a' }],
+  },
+  {
+    featureType: 'administrative',
+    elementType: 'geometry.stroke',
+    stylers: [{ color: '#4a6078' }],
+  },
+  {
+    featureType: 'administrative.land_parcel',
+    stylers: [{ visibility: 'off' }],
   },
   {
     featureType: 'poi',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#8a99a8' }],
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'geometry',
-    stylers: [{ color: '#283543' }],
-  },
-  {
-    featureType: 'poi.park',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#64779e' }],
+    stylers: [{ visibility: 'off' }],
   },
   {
     featureType: 'road',
@@ -72,7 +98,7 @@ export const darkModeStyles: google.maps.MapTypeStyle[] = [
   {
     featureType: 'road.highway',
     elementType: 'geometry.stroke',
-    stylers: [{ color: '#3b4a5a' }], // UPDATED: Match new land color
+    stylers: [{ color: '#3b4a5a' }],
   },
   {
     featureType: 'road.highway',
@@ -81,27 +107,11 @@ export const darkModeStyles: google.maps.MapTypeStyle[] = [
   },
   {
     featureType: 'transit',
-    elementType: 'geometry',
-    stylers: [{ color: '#3f5164' }],
-  },
-  {
-    featureType: 'transit.station',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#d59563' }],
+    stylers: [{ visibility: 'off' }],
   },
   {
     featureType: 'water',
     elementType: 'geometry',
     stylers: [{ color: '#1d2c3a' }], 
-  },
-  {
-    featureType: 'water',
-    elementType: 'labels.text.fill',
-    stylers: [{ color: '#515c6d' }],
-  },
-  {
-    featureType: 'water',
-    elementType: 'labels.text.stroke',
-    stylers: [{ color: '#1d2c3a' }],
   },
 ];
