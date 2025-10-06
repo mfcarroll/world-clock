@@ -59,6 +59,9 @@ async function startApp() {
   if (Capacitor.getPlatform() === 'ios') {
     document.body.classList.add('is-ios');
   }
+  if (Capacitor.getPlatform() === 'android') {
+    document.body.classList.add('is-android');
+  }
 
   const initialTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   state.localTimezone = initialTimezone;
