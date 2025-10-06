@@ -74,7 +74,11 @@ async function startApp() {
   
   // Start watching for location immediately.
   if (Capacitor.isNativePlatform()) {
-    Geolocation.watchPosition({}, (position, err) => {
+    Geolocation.watchPosition({
+      enableHighAccuracy: true,
+      timeout: 1000,
+      maximumAge: 0,
+    }, (position, err) => {
       if (err) {
         onLocationError(err as GeolocationPositionError);
         return;
