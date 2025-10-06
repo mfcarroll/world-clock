@@ -19,25 +19,17 @@ cd ../../../
 echo "--- INSTALLING NPM DEPENDENCIES ---"
 npm install
 
-# --- VERSIONING LOGIC START ---
-echo "--- SETTING APP VERSION ---"
-
-# Extract the version from package.json (e.g., "1.0.5")
-PACKAGE_VERSION=$(node -p "require('./package.json').version")
-echo "Version from package.json: $PACKAGE_VERSION"
-echo "Xcode Cloud Build Number: $CI_BUILD_NUMBER"
-
-# Use the capacitor-set-version tool to update the native project files
-# Note: --version sets MARKETING_VERSION, --build sets CURRENT_PROJECT_VERSION
-npx capacitor-set-version --version "$PACKAGE_VERSION" --build "$CI_BUILD_NUMBER"
-# --- VERSIONING LOGIC END ---
-
-
 echo "--- BUILDING WEB APP ---"
 npm run build
 
 echo "--- SYNCING CAPACITOR PROJECT --"
 npx cap sync ios
+
+echo "--- SETTING APP VERSION ---"
+PACKAGE_VERSION=$(node -p "require('./package.json').version")
+echo "Version from package.json: $PACKAGE_VERSION"
+echo "Xcode Cloud Build Number: $CI_BUILD_NUMBER"
+npx capacitor-set-version --version "$PACKAGE_VERSION" --build "$CI_BUILD_NUMBER"
 
 # Navigate back to the iOS project directory to install pods.
 cd ios/App
