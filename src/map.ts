@@ -371,14 +371,14 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   const { latitude, longitude, accuracy, altitude, speed, heading } = coords;
 
   if (accuracy <= 15 && (altitude !== null || speed !== null || heading !== null)) {
-    dom.locationTitleEl.innerHTML = `<i class="fas fa-satellite-dish fa-fw mr-3 text-blue-400"></i>GPS Location`;
+    dom.locationTitleEl.innerHTML = `<i class="fas fa-satellite-dish fa-fw mr-2 text-blue-400"></i>GPS Location`;
   } else if (accuracy <= 15) {
-    dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-3 text-blue-400"></i>Accurate Location`;
+    dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-2 text-blue-400"></i>Accurate Location`;
   } else {
-    dom.locationTitleEl.innerHTML = `<i class="fas fa-wifi fa-fw mr-3 text-gray-400"></i>Approximate Location`;
+    dom.locationTitleEl.innerHTML = `<i class="fas fa-wifi fa-fw mr-2 text-blue-400"></i>Approximate Location`;
   }
   
-  dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-2 text-gray-400"></i>Accuracy: ${formatAccuracy(accuracy)}`;
+  dom.accuracyDisplayEl.innerHTML = `<i class="fas fa-bullseye fa-fw mr-1 text-gray-400"></i>Accuracy: ${formatAccuracy(accuracy)}`;
   dom.accuracyDisplayEl.classList.remove('hidden');
 
   const formatCoordinate = (value: number, padding: number): string => {
