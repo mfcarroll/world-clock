@@ -13,6 +13,7 @@ export interface AppState {
     accuracyCircle: google.maps.Circle | null;
     locationAvailable: boolean;
     initialLocationSet: boolean;
+    mapsReady: boolean;
     lastFetchedCoords: { lat: number, lon: number };
     geoJsonData: any | null;
     geoJsonLoaded: boolean;
@@ -38,6 +39,7 @@ export const state: AppState = {
     accuracyCircle: null,
     locationAvailable: false,
     initialLocationSet: false,
+    mapsReady: false,
     lastFetchedCoords: { lat: 0, lon: 0 },
     geoJsonData: null,
     geoJsonLoaded: false,

@@ -221,6 +221,14 @@ export async function initMaps() {
   state.timezoneMapMarker = new Marker({ map: state.timezoneMap, position: { lat: 0, lng: 0 }, icon: blueDotIcon, visible: false });
 
   await setupTimezoneMapListeners();
+
+  state.mapsReady = true;
+
+  if (state.lastFetchedCoords && !state.initialLocationSet) {
+    updateLocationMap(state.lastFetchedCoords.lat, state.lastFetchedCoords.lon, 0); // accuracy can be 0, it doesn't affect centering
+    updateTimezoneMapMarker(state.lastFetchedCoords.lat, state.lastFetchedCoords.lon);
+    state.initialLocationSet = true;
+  }
 }
 
 async function setupTimezoneMapListeners() {
@@ -382,8 +390,8 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   dom.accuracyDisplayEl.classList.remove('hidden');
 
   const formatCoordinate = (value: number, padding: number): string => {
-    const [integer, fractional] = value.toFixed(4).split('.');
-    return `${integer.padStart(padding, '\u00A0')}.${fractional}°`;
+      const [integer, fractional] = value.toFixed(4).split('.');
+      return `${integer.padStart(padding, '\u00A0')}.${fractional}°`;
   };
 
   dom.latitudeEl.textContent = formatCoordinate(latitude, 4);
@@ -392,9 +400,21 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   dom.locationLoader.classList.add('hidden');
   dom.locationContent.classList.remove('hidden');
 
-  updateLocationMap(latitude, longitude, accuracy);
-  updateTimezoneMapMarker(latitude, longitude);
-  state.initialLocationSet = true;
+  // --- MODIFICATION START ---
+  // Only center the map if it's ready and this is the first location update of the session.
+  if (state.mapsReady && !state.initialLocationSet) {
+    updateLocationMap(latitude, longitude, accuracy);
+    updateTimezoneMapMarker(latitude, longitude);
+    state.initialLocationSet = true; // Set the flag AFTER the first update
+  } else if (state.mapsReady) {
+    // For subsequent updates, just move the markers without re-centering.
+    if (state.locationMarker) {
+      state.locationMarker.setPosition({ lat: latitude, lng: longitude });
+    }
+    if (state.timezoneMapMarker) {
+      state.timezoneMapMarker.setPosition({ lat: latitude, lng: longitude });
+    }
+  }
 
   const geoJsonTz = findTimezoneFromGeoJSON(latitude, longitude);
   const crossedBoundary = geoJsonTz !== state.localTimezone;
