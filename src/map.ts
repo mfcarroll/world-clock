@@ -419,7 +419,7 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   const geoJsonTz = findTimezoneFromGeoJSON(latitude, longitude);
   const crossedBoundary = geoJsonTz !== state.localTimezone;
 
-  const dist = distance(latitude, longitude, state.lastFetchedCoords.lat, state.lastFetchedCoords.lon);
+  const dist = distance(latitude, longitude, state.lastFetchedCoords?.lat || 0, state.lastFetchedCoords?.lon || 0);
   if (dist > 0.1 || crossedBoundary) {
     state.lastFetchedCoords = { lat: latitude, lon: longitude };
     const tzid = await fetchTimezoneForCoordinates(latitude, longitude);

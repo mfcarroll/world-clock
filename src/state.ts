@@ -14,7 +14,7 @@ export interface AppState {
     locationAvailable: boolean;
     initialLocationSet: boolean;
     mapsReady: boolean;
-    lastFetchedCoords: { lat: number, lon: number };
+    lastFetchedCoords: { lat: number, lon: number } | null;
     geoJsonData: any | null;
     geoJsonLoaded: boolean;
     hoveredZone: number | null;
@@ -40,7 +40,7 @@ export const state: AppState = {
     locationAvailable: false,
     initialLocationSet: false,
     mapsReady: false,
-    lastFetchedCoords: { lat: 0, lon: 0 },
+    lastFetchedCoords: null,
     geoJsonData: null,
     geoJsonLoaded: false,
     hoveredZone: null,
