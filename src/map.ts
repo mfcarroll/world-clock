@@ -381,7 +381,7 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
   if (accuracy <= 15 && (altitude !== null || speed !== null || heading !== null)) {
     dom.locationTitleEl.innerHTML = `<i class="fas fa-satellite-dish fa-fw mr-2 text-blue-400"></i>GPS Location`;
   } else if (accuracy <= 15) {
-    dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-2 text-blue-400"></i>Accurate Location`;
+    dom.locationTitleEl.innerHTML = `<i class="fas fa-location-dot fa-fw mr-2 text-blue-400"></i>Location`;
   } else {
     dom.locationTitleEl.innerHTML = `<i class="fas fa-wifi fa-fw mr-2 text-blue-400"></i>Approximate Location`;
   }
