@@ -7,7 +7,7 @@ import { state } from './state';
 import { initMaps, onLocationError, onLocationSuccess, selectTimezone, renderWorldClocks, addUniqueTimezoneToList, updateUserTimezoneDetails, showLocationUnavailable } from './map';
 import { updateAllClocks, getUtcOffset, syncClock, getDisplayTimezoneName, startClocks } from './time';
 import { Capacitor } from '@capacitor/core';
-import { Geolocation } from '@capacitor/geolocation';
+import { Geolocation, PositionOptions } from '@capacitor/geolocation';
 import { library, dom as faDom } from '@fortawesome/fontawesome-svg-core';
 import { faLocationDot, faWifi, faBullseye, faMobileAlt, faSatelliteDish } from '@fortawesome/free-solid-svg-icons';
 
@@ -74,11 +74,13 @@ async function startApp() {
   
   // Start watching for location immediately.
   if (Capacitor.isNativePlatform()) {
-    Geolocation.watchPosition({
-      enableHighAccuracy: true,
-      timeout: 1000,
-      maximumAge: 0,
-    }, (position, err) => {
+    let options: PositionOptions = {}
+    if (Capacitor.getPlatform() === 'android') {
+      options.enableHighAccuracy = true;
+      options.maximumAge = 0;
+      options.timeout = 1000;
+    }
+    Geolocation.watchPosition(options, (position, err) => {
       if (err) {
         onLocationError(err as GeolocationPositionError);
         return;
