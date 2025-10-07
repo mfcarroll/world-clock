@@ -414,6 +414,11 @@ export async function onLocationSuccess(pos: GeolocationPosition) {
     if (state.timezoneMapMarker) {
       state.timezoneMapMarker.setPosition({ lat: latitude, lng: longitude });
     }
+    if (state.accuracyCircle) {
+      const pos = { lat: latitude, lng: longitude };
+      state.accuracyCircle.setCenter(pos);
+      state.accuracyCircle.setRadius(accuracy);
+    }
   }
 
   const geoJsonTz = findTimezoneFromGeoJSON(latitude, longitude);
