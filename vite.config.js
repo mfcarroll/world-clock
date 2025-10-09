@@ -1,5 +1,6 @@
 // vite.config.js
 
+import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import basicSsl from '@vitejs/plugin-basic-ssl';
@@ -7,6 +8,14 @@ import basicSsl from '@vitejs/plugin-basic-ssl';
 export default defineConfig({
   // Change the base path for production builds
   base: '/',
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        privacy: resolve(__dirname, 'privacy.html')
+      }
+    }
+  },
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',
